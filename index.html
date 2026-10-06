@@ -1,0 +1,649 @@
+<!doctype html>
+<html lang="en-IN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>XS</title>
+<meta name="description" content="XS: India-centric writing on Finance, Tech, Politics, and Culture and Lifestyle. Writers publish by invitation.">
+<meta name="color-scheme" content="light dark">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,800&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>html{color-scheme:light}body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style>
+<style>
+/* Layout: a compact masthead bar, then one reading column that widens into a lead-plus-rail grid on the front page; each of the four sections owns one colour that travels with its pieces. */
+:root {
+  --bg: #f5f6fa; --surface: #ffffff; --ink: #14172b; --ink-2: #4b5068; --line: #d9dbe6;
+  --mark-bg: #f2b01e; --mark-fg: #14172b;
+  --fin: #0b7a5b; --tec: #2747d8; --pol: #b4341f; --cul: #a5327f;
+  --warn-bg: #fff3d6; --warn-fg: #6b4a00; --ok: #0b7a5b; --bad: #b4341f;
+  --display: "Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+  --read: "Source Serif 4", Georgia, "Times New Roman", serif;
+  --mono: "IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #101223; --surface: #191c33; --ink: #ecedf6; --ink-2: #a6abc6; --line: #2e3252;
+  --fin: #4fd0a8; --tec: #8ea4ff; --pol: #ff8e78; --cul: #f08bd0;
+  --warn-bg: #3a2f10; --warn-fg: #ffd98a; --ok: #4fd0a8; --bad: #ff8e78; color-scheme: dark } }
+:root[data-theme="dark"] {
+  --bg: #101223; --surface: #191c33; --ink: #ecedf6; --ink-2: #a6abc6; --line: #2e3252;
+  --fin: #4fd0a8; --tec: #8ea4ff; --pol: #ff8e78; --cul: #f08bd0;
+  --warn-bg: #3a2f10; --warn-fg: #ffd98a; --ok: #4fd0a8; --bad: #ff8e78; color-scheme: dark }
+
+* { box-sizing: border-box }
+body { background: var(--bg); color: var(--ink); font-family: var(--display); font-size: 16px; line-height: 1.5 }
+a { color: inherit }
+:focus-visible { outline: 2px solid var(--tec); outline-offset: 2px }
+button, input, select, textarea { font: inherit; color: inherit }
+
+.bar { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5; background: var(--bg); border-bottom: 1px solid var(--line) }
+.bar-in, .wrap { max-width: 1080px; margin-inline: auto; padding-inline: 16px }
+.bar-in { display: flex; align-items: center; gap: 12px 20px; flex-wrap: wrap; padding-block: 10px }
+.mark { background: var(--mark-bg); color: var(--mark-fg); font-weight: 800; font-size: 22px; letter-spacing: -0.04em; padding: 2px 9px 3px; text-decoration: none; line-height: 1.1 }
+.nav { display: flex; gap: 4px 16px; flex-wrap: wrap; flex: 1; min-width: 0 }
+.nav a { text-decoration: none; font-weight: 600; font-size: 15px; padding-block: 4px; border-bottom: 2px solid transparent }
+.nav a[aria-current="page"] { border-bottom-color: currentColor }
+.tools { display: flex; gap: 8px; align-items: center; flex-wrap: wrap }
+.wrap { padding-block: 28px 56px }
+
+.btn { border: 1px solid var(--ink); background: transparent; padding: 6px 14px; font-weight: 600; font-size: 14px; cursor: pointer; text-decoration: none; display: inline-block }
+.btn.solid { background: var(--ink); color: var(--bg) }
+.btn.quiet { border-color: var(--line) }
+.btn:disabled { opacity: .5; cursor: not-allowed }
+
+.s-finance { --sec: var(--fin) } .s-tech { --sec: var(--tec) } .s-politics { --sec: var(--pol) } .s-culture { --sec: var(--cul) }
+.meta { font-family: var(--mono); font-size: 12px; letter-spacing: .04em; color: var(--ink-2); display: flex; gap: 4px 12px; flex-wrap: wrap; align-items: center }
+.sec { color: var(--sec); text-transform: uppercase; font-weight: 500; letter-spacing: .08em; text-decoration: none }
+.sec::before { content: ""; display: inline-block; width: 8px; height: 8px; background: var(--sec); margin-right: 6px }
+.tag { border: 1px solid var(--line); padding: 0 6px; text-transform: uppercase; letter-spacing: .08em }
+.tag.warn { background: var(--warn-bg); color: var(--warn-fg); border-color: transparent }
+
+h1, h2, h3 { text-wrap: balance; margin: 0; line-height: 1.12; letter-spacing: -0.02em }
+.front { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); gap: 32px }
+.lead h2 { font-size: clamp(30px, 5vw, 52px); font-weight: 800 }
+.lead h2 a, .item h3 a { text-decoration: none }
+.lead h2 a:hover, .item h3 a:hover { text-decoration: underline; text-decoration-thickness: 2px; text-underline-offset: 4px }
+.dek { font-family: var(--read); font-size: 19px; color: var(--ink-2); margin: 0; max-width: 60ch }
+.lead, .item { display: grid; gap: 10px; align-content: start }
+.rail { display: grid; gap: 20px; align-content: start; border-left: 1px solid var(--line); padding-left: 24px }
+.item h3 { font-size: 20px; font-weight: 600 }
+.item .dek { font-size: 16px }
+.cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 28px; margin-top: 40px; padding-top: 24px; border-top: 2px solid var(--ink) }
+.col { display: grid; gap: 18px; align-content: start; min-width: 0 }
+.col > .sec { font-family: var(--mono); font-size: 13px }
+.list { display: grid; gap: 28px; max-width: 720px }
+.pagehead { display: grid; gap: 8px; margin-bottom: 28px }
+.pagehead h1 { font-size: clamp(28px, 4.5vw, 44px); font-weight: 800 }
+.pagehead p { margin: 0; color: var(--ink-2); max-width: 62ch }
+.empty { border: 1px dashed var(--line); padding: 24px; color: var(--ink-2); max-width: 62ch }
+
+.piece { max-width: 680px; display: grid; gap: 18px }
+.piece h1 { font-size: clamp(30px, 5vw, 48px); font-weight: 800 }
+.prose { font-family: var(--read); font-size: 19px; line-height: 1.65; display: grid; gap: 18px; overflow-wrap: anywhere }
+.prose p { margin: 0 }
+.prose h3 { font-family: var(--display); font-size: 22px; font-weight: 600; margin-top: 8px }
+.note { border-left: 3px solid var(--sec, var(--ink)); background: var(--surface); padding: 12px 16px; font-size: 15px; display: grid; gap: 6px; overflow-wrap: anywhere }
+.note b { font-family: var(--mono); font-size: 12px; text-transform: uppercase; letter-spacing: .08em; font-weight: 500 }
+.note ul { margin: 0; padding-left: 18px }
+.pic { margin: 0; display: grid; gap: 6px }
+.pic img { width: 100%; height: auto; display: block; background: var(--line) }
+.pic.small img { max-width: 320px }
+.row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center }
+
+form.sheet, .sheet { display: grid; gap: 18px; max-width: 720px }
+.field { display: grid; gap: 6px; min-width: 0 }
+.field label, .field legend { font-weight: 600; font-size: 14px }
+.field small { color: var(--ink-2); font-size: 13px }
+.field input[type="text"], .field select, .field textarea { background: var(--surface); border: 1px solid var(--line); padding: 9px 11px; width: 100%; border-radius: 0 }
+.field textarea { font-family: var(--read); font-size: 17px; line-height: 1.55; min-height: 320px; resize: vertical }
+.field textarea.short { min-height: 84px; font-family: var(--display); font-size: 15px }
+.two { align-items: start; display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 18px }
+fieldset { border: 1px solid var(--line); padding: 14px 16px; margin: 0; display: grid; gap: 10px; min-width: 0 }
+.check { display: flex; gap: 10px; align-items: flex-start; font-size: 15px }
+.check input { margin-top: 4px; flex: none }
+.alert { background: var(--warn-bg); color: var(--warn-fg); padding: 10px 14px; font-size: 14px }
+.err { color: var(--bad); font-size: 14px; font-weight: 600 }
+.queue { display: grid; gap: 16px }
+.card { background: var(--surface); border: 1px solid var(--line); padding: 16px; display: grid; gap: 10px; min-width: 0 }
+.card h3 { font-size: 19px; font-weight: 600 }
+.card p { margin: 0; overflow-wrap: anywhere }
+.tabs { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 20px }
+.tabs button[aria-pressed="true"] { background: var(--ink); color: var(--bg) }
+.rules { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 24px }
+.rules ol { margin: 8px 0 0; padding-left: 20px; display: grid; gap: 6px; font-size: 15px }
+footer { border-top: 1px solid var(--line); margin-top: 48px; padding-top: 16px; font-family: var(--mono); font-size: 12px; color: var(--ink-2); display: grid; gap: 4px }
+#toast { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(20px + env(safe-area-inset-bottom, 0px)); background: var(--ink); color: var(--bg); padding: 10px 16px; font-size: 14px; font-weight: 600; max-width: calc(100% - 32px) }
+@media (max-width: 720px) {
+  .front { grid-template-columns: minmax(0, 1fr) }
+  .rail { border-left: 0; padding-left: 0; border-top: 1px solid var(--line); padding-top: 20px }
+}
+@media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto !important } }
+</style>
+</head>
+<body>
+<header class="bar">
+  <div class="bar-in">
+    <a class="mark" href="#home" data-go="home" aria-label="XS front page">XS</a>
+    <nav class="nav" id="nav" aria-label="Sections"></nav>
+    <div class="tools" id="tools"></div>
+  </div>
+</header>
+<main class="wrap" id="main"></main>
+<div id="toast" role="status" aria-live="polite" hidden></div>
+
+<script>
+const SUPA_URL = "https://bysumjjojjlzqafggnmy.supabase.co";
+const SUPA_KEY = "sb_publishable_pu4TtLaFkvOkKqLezaQ0cg_08Yvi36R";   // publishable key: safe to ship in the page
+const BUCKET = "piece-images";
+const SECTIONS = {
+  finance: { name: "Finance", line: "Markets, money and policy. News, analysis and education. No investment advice.",
+    check: "This piece gives no buy, sell or hold call, no price target and no promised return.",
+    rules: ["No buy, sell or hold calls, price targets or model portfolios unless you are SEBI-registered.", "In explainers, do not use the last three months of price data to point at a security's future price.", "No assured or guaranteed returns, and no profit screenshots.", "State whether you or your family hold what you write about.", "Never publish unpublished price-sensitive information."] },
+  tech: { name: "Tech", line: "Products, companies and the internet in India. Claims a reader can check.",
+    check: "I used what I reviewed, and I state how I got it (bought, loaned or gifted).",
+    rules: ["Say how you got the product. Label affiliate links and sponsorships.", "Report a vulnerability to the vendor or CERT-In first. No working exploits or leaked credentials.", "Funding, layoffs and misconduct claims need a document or two independent sources.", "No scraped personal data, private chats or employee lists.", "Buying unlisted shares or tokens follows the Finance rules."] },
+  politics: { name: "Politics", line: "Strong opinion from any side, resting on records. No paid political content.",
+    check: "Every allegation against a named person rests on a record, and they were asked to respond.",
+    rules: ["Declare any party membership, campaign role or political payment.", "Allegations need a record such as an FIR, court order, audit or RTI reply.", "Nothing meant to influence a poll in the 48 hours before polling ends in that area.", "No vote appeals on religion, caste, community or language.", "No synthetic audio, image or video of a real politician."] },
+  culture: { name: "Culture & Lifestyle", line: "Films, books, food, health, travel and how people live.",
+    check: "No cure claims; every paid or gifted mention is labelled.",
+    rules: ["Health, diet and fitness advice comes from a qualified writer who states the qualification.", "Never say a product, diet or remedy cures or prevents a disease.", "Label free stays, meals, products and paid collaborations.", "No promotion of real-money games, betting, tobacco or alcohol brands.", "No photos of private people, especially children, without consent."] }
+};
+const LABELS = ["News", "Analysis", "Opinion"];
+const COMMON = ["Label each piece News, Analysis or Opinion.", "Source every factual claim.", "No false statement that harms a reputation.", "No hate or incitement against any group.", "Use only words and images you have rights to.", "Label AI-made images, audio and video.", "Disclose money, gifts, holdings and affiliations."];
+const SEBI = /^IN[AH]\d{9}$/;
+const DIRECT = ["tech", "culture"];
+const PIC = /^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+\/=]+$/;
+const ADVICE = /\b(target price|price target|stop[- ]?loss|multibagger|guaranteed returns?|assured returns?|buy (call|rating|now)|sell (call|rating)|strong buy|accumulate at)\b/i;
+
+const S = { ready: false, db: null, user: null, articles: [], edited: [], directRaw: [], likes: {}, comments: [], img: null, pics: {}, leadId: "", all: [], pulled: [], editingId: null, loadError: "", writers: {}, requests: {}, mine: [], saved: [], me: { id: null, canEdit: false, canWrite: null }, route: { view: "home" }, desk: { tab: "review", queue: null, reports: null, archive: null } };
+const main = document.getElementById("main");
+
+function h(tag, attrs, ...kids) {
+  const e = document.createElement(tag);
+  for (const k in (attrs || {})) {
+    const v = attrs[k];
+    if (v == null || v === false) continue;
+    if (k === "class") e.className = v;
+    else if (k.slice(0, 2) === "on") e.addEventListener(k.slice(2), v);
+    else if (k === "value") e.value = v;
+    else if (k === "checked") e.checked = !!v;
+    else e.setAttribute(k, v === true ? "" : v);
+  }
+  for (const c of kids.flat(3)) { if (c == null || c === false) continue; e.append(c.nodeType ? c : document.createTextNode(String(c))); }
+  return e;
+}
+function link(token, text, cls) { return h("a", { href: "#" + token, "data-go": token, class: cls }, text); }
+function toast(msg) { const t = document.getElementById("toast"); t.textContent = msg; t.hidden = false; clearTimeout(toast.t); toast.t = setTimeout(() => { t.hidden = true; }, 3200); }
+function when(ms) { try { return new Intl.DateTimeFormat("en-IN", { day: "numeric", month: "short", year: "numeric", timeZone: "Asia/Kolkata" }).format(new Date(ms)); } catch (e) { return ""; } }
+function minutes(body) { return Math.max(1, Math.round(String(body || "").trim().split(/\s+/).length / 220)); }
+function isWriter() { return S.me.canEdit || !!(S.me.id && S.writers[S.me.id]); }
+function editedCount(uid) { return S.edited.filter((a) => a.authorId === uid && !a.sample).length; }
+function canDirect(uid, section) { const w = S.writers[uid]; return !!uid && DIRECT.includes(section) && !!w && w.direct !== false && editedCount(uid) >= 3; }
+function pulled(uid, id) { return S.all.some((p) => p.id === id && p.raw === "unpublished_by_writer"); }
+function sourcesOk(t) { const lines = String(t).split("\n").map((x) => x.trim()).filter(Boolean); return lines.length > 0 && lines.every((l) => /^https:\/\/\S+\.\S+$/.test(l) || (l.length >= 12 && !/^https?:/i.test(l))); }
+function disclosureOk(t) { return /^none\.?$/i.test(t) || t.length >= 20; }
+function likeCount(id) { return Object.values(S.likes).filter((l) => l && l.ids && l.ids[id] === true).length; }
+function iLike(id) { const l = S.me.id && S.likes[S.me.id]; return !!(l && l.ids && l.ids[id] === true); }
+function figure(a, small) {
+  const img = h("img", { alt: a.imageAlt || "", loading: "lazy" });
+  const fig = h("figure", { class: "pic" + (small ? " small" : ""), hidden: !a.image }, img, h("figcaption", { class: "meta" }, a.imageAI && h("span", { class: "tag warn" }, "AI-generated image"), a.imageCredit && h("span", null, "Image: " + a.imageCredit)));
+  if (a.image) img.src = a.image;
+  return fig;
+}
+function pickImage(ev) {
+  const f = ev.target.files && ev.target.files[0]; if (!f) return;
+  const r = new FileReader();
+  r.onload = () => { const im = new Image();
+    im.onload = () => { let w = Math.min(1200, im.naturalWidth), q = 0.8, out = "";
+      for (let i = 0; i < 10; i++) { const c = document.createElement("canvas"); c.width = w; c.height = Math.max(1, Math.round(im.naturalHeight * w / im.naturalWidth)); c.getContext("2d").drawImage(im, 0, 0, c.width, c.height); out = c.toDataURL("image/jpeg", q); if (out.length <= 550000) break; if (q > 0.5) q -= 0.1; else w = Math.round(w * 0.8); }
+      if (out.length > 550000) { S.img = null; toast("That image is too detailed to store. Try a simpler or smaller one."); } else S.img = out;
+      showPick(); };
+    im.onerror = () => toast("XS could not read that file as an image.");
+    im.src = r.result; };
+  r.readAsDataURL(f);
+}
+function showPick() {
+  const box = document.getElementById("w-img-prev"); if (!box) return; box.replaceChildren();
+  if (S.img) box.append(h("figure", { class: "pic small" }, h("img", { src: S.img, alt: "Preview of the chosen image" })), h("div", { class: "row" }, h("button", { class: "btn quiet", type: "button", onclick: () => { S.img = null; const i = document.getElementById("w-img"); if (i) i.value = ""; showPick(); } }, "Remove image")));
+}
+function byline(a) { return (a.authorId && S.requests[a.authorId] && S.requests[a.authorId].penName) || a.penName || "XS"; }
+
+function parse(token) {
+  token = (token || "").replace(/^#/, "");
+  if (SECTIONS[token]) return { view: "section", id: token };
+  if (token.slice(0, 2) === "a-") return { view: "article", id: token.slice(2) };
+  if (token.slice(0, 2) === "w-") return { view: "author", id: token.slice(2) };
+  if (["write", "desk", "saved", "rules", "signin"].includes(token)) return { view: token };
+  return { view: "home" };
+}
+function go(token) { S.route = parse(token); try { if (location.hash.replace(/^#/, "") !== token) location.hash = token; } catch (e) {} render(true); window.scrollTo(0, 0); }
+document.addEventListener("click", (ev) => { const a = ev.target.closest && ev.target.closest("a[data-go]"); if (a) { ev.preventDefault(); go(a.getAttribute("data-go")); } });
+window.addEventListener("hashchange", () => { const r = parse(location.hash); if (JSON.stringify(r) !== JSON.stringify(S.route)) { S.route = r; render(true); } });
+
+function chrome() {
+  const nav = document.getElementById("nav"); nav.replaceChildren();
+  for (const k in SECTIONS) { const a = link(k, SECTIONS[k].name); if (S.route.view === "section" && S.route.id === k) a.setAttribute("aria-current", "page"); nav.append(a); }
+  const tools = document.getElementById("tools"); tools.replaceChildren(link("rules", "Rules", "btn quiet"));
+  if (S.me.id) tools.append(link("saved", "Saved", "btn quiet"));
+  if (S.me.canEdit) tools.append(link("desk", "Desk", "btn quiet"));
+  tools.append(link("write", "Write", "btn solid"));
+  tools.append(S.me.id ? h("button", { class: "btn quiet", type: "button", onclick: signOut }, "Sign out") : link("signin", "Sign in", "btn quiet"));
+}
+
+function metaRow(a, withSec) {
+  return h("div", { class: "meta" },
+    withSec && link(a.section, SECTIONS[a.section] ? SECTIONS[a.section].name : a.section, "sec"),
+    h("span", { class: "tag" }, a.label || "Analysis"),
+    a.sponsored && h("span", { class: "tag warn" }, "Sponsored"),
+    a.sample && h("span", { class: "tag warn" }, "Sample"),
+    a.direct && S.me.canEdit && h("span", { class: "tag" }, "Direct"),
+    h("span", null, a.authorId ? link("w-" + a.authorId, byline(a)) : byline(a)),
+    a.publishedAt && h("span", null, when(a.publishedAt)),
+    h("span", null, minutes(a.body) + " min read"));
+}
+function item(a, big, withSec) {
+  return h("article", { class: (big ? "lead" : "item") + " s-" + a.section },
+    metaRow(a, withSec !== false),
+    h(big ? "h2" : "h3", null, link("a-" + a.id, a.title)),
+    a.dek && h("p", { class: "dek" }, a.dek), big && a.hasImage && figure(a));
+}
+function emptyState(text) { return h("p", { class: "empty" }, text); }
+function footer() {
+  return h("footer", null,
+    h("span", null, "XS. India-centric Finance, Tech, Politics, Culture & Lifestyle. Writers publish by invitation."),
+    h("span", null, "Grievance officer: to be named before launch. To complain about a piece, use Report on that piece."));
+}
+
+function viewHome() {
+  if (!S.ready) return [emptyState(S.loadError ? "XS could not load its pieces. Check your connection and reload the page. (" + S.loadError + ")" : "Loading the latest pieces.")];
+  if (!S.articles.length) return [h("div", { class: "pagehead" }, h("h1", null, "Nothing published yet"), h("p", null, "Published pieces appear here, newest first, with one column for each of the four sections. Invited writers submit from Write. The editor publishes from the Desk."))];
+  const first = S.articles.find((a) => a.id === S.leadId) || S.articles[0]; const rest = S.articles.filter((a) => a !== first);
+  const out = [h("div", { class: "front" }, item(first, true), h("div", { class: "rail" }, rest.slice(0, 4).map((a) => item(a))))];
+  const cols = h("div", { class: "cols" });
+  for (const k in SECTIONS) {
+    const list = S.articles.filter((a) => a.section === k).slice(0, 3);
+    cols.append(h("section", { class: "col s-" + k }, link(k, SECTIONS[k].name, "sec"), list.length ? list.map((a) => item(a, false, false)) : h("p", { class: "meta" }, "No pieces yet")));
+  }
+  out.push(cols);
+  return out;
+}
+function viewSection(k) {
+  const list = S.articles.filter((a) => a.section === k);
+  return [h("div", { class: "pagehead s-" + k }, h("span", { class: "meta" }, h("span", { class: "sec" }, "Section")), h("h1", null, SECTIONS[k].name), h("p", null, SECTIONS[k].line)),
+    list.length ? h("div", { class: "list" }, list.map((a) => item(a, false, false))) : emptyState("No " + SECTIONS[k].name + " pieces published yet.")];
+}
+function prose(body) {
+  const box = h("div", { class: "prose" });
+  for (const block of String(body || "").split(/\n\s*\n/)) { const t = block.trim(); if (!t) continue; box.append(t.slice(0, 3) === "## " ? h("h3", null, t.slice(3)) : h("p", null, t)); }
+  return box;
+}
+function sourceList(text) {
+  const lines = String(text || "").split("\n").map((s) => s.trim()).filter(Boolean);
+  if (!lines.length) return null;
+  return h("div", { class: "note" }, h("b", null, "Sources"), h("ul", null, lines.map((l) => h("li", null, /^https:\/\/\S+$/.test(l) ? h("a", { href: l, target: "_blank", rel: "noopener noreferrer" }, l) : l))));
+}
+function viewArticle(id) {
+  const a = S.articles.find((x) => x.id === id);
+  if (!a) return [emptyState(S.ready ? "This piece is not published, or it was removed." : "Loading the piece.")];
+  const saved = S.saved.includes(id);
+  const out = h("article", { class: "piece s-" + a.section }, metaRow(a, true), h("h1", null, a.title), a.dek && h("p", { class: "dek" }, a.dek), a.hasImage && figure(a), prose(a.body));
+  if (a.disclosure) out.append(h("div", { class: "note" }, h("b", null, "Disclosure"), h("span", null, a.disclosure + (a.sebiReg ? " SEBI registration: " + a.sebiReg + "." : ""))));
+  out.append(sourceList(a.sources) || "");
+  for (const c of (a.corrections || [])) out.append(h("div", { class: "note" }, h("b", null, "Correction, " + when(c.at)), h("span", null, c.text)));
+  if (a.section === "finance") out.append(h("p", { class: "meta" }, "This article is for information and education. It is not investment advice. The author is not SEBI-registered unless stated."));
+  const actions = h("div", { class: "row" });
+  const n = likeCount(id);
+  if (S.me.id && S.me.canWrite !== false) actions.append(h("button", { class: "btn" + (iLike(id) ? " solid" : " quiet"), type: "button", "aria-pressed": String(iLike(id)), onclick: () => toggleLike(id) }, (iLike(id) ? "Liked" : "Like") + (n ? " · " + n : "")));
+  else if (n) actions.append(h("span", { class: "meta" }, n + (n === 1 ? " like" : " likes")));
+  if (S.me.id) actions.append(h("button", { class: "btn quiet", type: "button", onclick: () => toggleSave(id) }, saved ? "Saved. Remove" : "Save"));
+  const reportBox = h("div", { class: "sheet", hidden: true });
+  if (S.db && S.me.canWrite !== false) actions.append(h("button", { class: "btn quiet", type: "button", onclick: () => { reportBox.hidden = !reportBox.hidden; } }, "Report"));
+  reportBox.append(
+    h("div", { class: "field" }, h("label", { for: "rep-reason" }, "What is wrong with this piece?"),
+      h("select", { id: "rep-reason" }, ["Factual error", "Defamation or false allegation", "Hate or incitement", "Investment advice or promised returns", "Undisclosed paid content", "Copyright", "Privacy", "Other"].map((r) => h("option", null, r)))),
+    h("div", { class: "field" }, h("label", { for: "rep-note" }, "Details"), h("textarea", { id: "rep-note", class: "short", maxlength: "1500" })),
+    h("div", { class: "row" }, h("button", { class: "btn solid", type: "button", onclick: () => sendReport(a, reportBox) }, "Send report")));
+  out.append(actions, reportBox);
+  out.append(commentsBlock(a));
+  if (S.me.canEdit) out.append(h("div", { class: "card" }, h("b", { class: "meta" }, "Editor"),
+    h("div", { class: "field" }, h("label", { for: "corr-text" }, "Add a dated correction"), h("input", { type: "text", id: "corr-text", maxlength: "500" })),
+    h("div", { class: "row" }, h("button", { class: "btn", type: "button", onclick: () => addCorrection(a) }, "Add correction"), h("button", { class: "btn quiet", type: "button", onclick: () => setLead(a.id === S.leadId ? "" : a.id) }, a.id === S.leadId ? "Stop leading with this" : "Make lead"), confirmBtn("Unpublish", "Confirm unpublish", () => unpublish(a)))));
+  return [out];
+}
+function commentsBlock(a) {
+  const list = S.comments.filter((c) => c.articleId === a.id).sort((x, y) => (x.at || 0) - (y.at || 0));
+  const box = h("section", { class: "sheet" }, h("h3", null, list.length ? "Comments · " + list.length : "Comments"));
+  const spans = {};
+  for (const c of list) {
+    const pen = S.requests[c.by] && S.requests[c.by].penName;
+    const name = h("span", null, pen || "Reader"); if (!pen) (spans[c.by] = spans[c.by] || []).push(name);
+    box.append(h("div", { class: "card" }, h("div", { class: "meta" }, name, h("span", null, when(c.at))), h("p", null, c.text),
+      (S.me.canEdit || c.by === S.me.id) && h("div", { class: "row" }, confirmBtn(c.by === S.me.id ? "Delete" : "Hide", "Confirm", () => hideComment(c)))));
+  }
+  const ids = Object.keys(spans);
+    if (!list.length) box.append(h("p", { class: "meta" }, "No comments yet."));
+  if (S.db && S.me.id && S.me.canWrite !== false) box.append(
+    h("div", { class: "field" }, h("label", { for: "c-text" }, "Add a comment"), h("textarea", { id: "c-text", class: "short", maxlength: "1000" }), h("small", null, "Comments follow the house rules. The editor can hide any comment.")),
+    h("div", { class: "row" }, h("button", { class: "btn solid", type: "button", onclick: () => postComment(a) }, "Post comment")));
+  else box.append(h("p", { class: "meta" }, "Sign in to like, save, comment or report."));
+  return box;
+}
+function confirmBtn(label, confirmLabel, fn) {
+  const b = h("button", { class: "btn quiet", type: "button" }, label); let armed = false;
+  b.addEventListener("click", () => { if (!armed) { armed = true; b.textContent = confirmLabel; setTimeout(() => { armed = false; b.textContent = label; }, 10000); } else fn(); });
+  return b;
+}
+function viewAuthor(id) {
+  const r = S.requests[id] || {}; const list = S.articles.filter((a) => a.authorId === id);
+  return [h("div", { class: "pagehead" }, h("span", { class: "meta" }, S.writers[id] ? "Invited writer" : "Writer"), h("h1", null, r.penName || "Writer"), r.bio && h("p", null, r.bio)),
+    list.length ? h("div", { class: "list" }, list.map((a) => item(a))) : emptyState("No published pieces from this writer yet.")];
+}
+function viewSaved() {
+  const list = S.articles.filter((a) => S.saved.includes(a.id));
+  return [h("div", { class: "pagehead" }, h("h1", null, "Saved"), h("p", null, "Pieces you saved. Only you can see this list.")), list.length ? h("div", { class: "list" }, list.map((a) => item(a))) : emptyState("Nothing saved yet. Open a piece and choose Save.")];
+}
+function viewRules() {
+  const grid = h("div", { class: "rules" }, h("section", null, h("h3", null, "Every writer"), h("ol", null, COMMON.map((r) => h("li", null, r)))));
+  for (const k in SECTIONS) grid.append(h("section", { class: "s-" + k }, h("span", { class: "meta" }, h("span", { class: "sec" }, SECTIONS[k].name)), h("ol", null, SECTIONS[k].rules.map((r) => h("li", null, r)))));
+  return [h("div", { class: "pagehead" }, h("h1", null, "House rules"), h("p", null, "The short form of the XS Publisher Guidelines. Writers confirm these on every submission. The full guidelines name the law behind each rule. XS keeps a record of every piece it publishes, including pieces later unpublished by the editor or the writer, for as long as it may need them to answer a complaint or a legal notice.")), grid];
+}
+
+function draft() { try { return JSON.parse(localStorage.getItem("xs-draft") || "{}"); } catch (e) { return {}; } }
+function keepDraft() { try { localStorage.setItem("xs-draft", JSON.stringify(readForm())); } catch (e) {} }
+function val(id) { const e = document.getElementById(id); return e ? (e.type === "checkbox" ? e.checked : e.value.trim()) : ""; }
+function readForm() { return { title: val("w-title"), dek: val("w-dek"), section: val("w-section"), label: val("w-label"), body: val("w-body"), sources: val("w-sources"), disclosure: val("w-disclosure"), sebiReg: val("w-sebi"), sponsored: val("w-sponsored"), imageAlt: val("w-alt"), imageCredit: val("w-credit"), imageAI: val("w-imgai") }; }
+
+function viewWrite() {
+  const head = h("div", { class: "pagehead" }, h("h1", null, "Write for XS"), h("p", null, "XS publishes by invitation. The editor reads every Finance and Politics piece before it goes live. Tech and Culture & Lifestyle writers publish directly once the editor has published three of their pieces."));
+  if (!S.ready) return [head, emptyState("Checking your invitation.")];
+  if (!S.me.id) return [head, h("p", { class: "alert" }, "Sign in first. Then you can request an invitation to write."), h("div", { class: "row" }, link("signin", "Sign in", "btn solid"))];
+  const mine = S.requests[S.me.id];
+  if (!mine) return [head, h("form", { class: "sheet", onsubmit: saveByline },
+    h("p", { class: "alert" }, S.me.canEdit ? "Set the byline readers will see on your pieces." : "Tell the editor who you are. You can submit once your invitation is approved."),
+    h("div", { class: "field" }, h("label", { for: "b-name" }, "Byline"), h("input", { type: "text", id: "b-name", maxlength: "40", required: true }), h("small", null, "The name printed on your pieces. 2 to 40 characters.")),
+    h("div", { class: "field" }, h("label", { for: "b-bio" }, "About you"), h("textarea", { id: "b-bio", class: "short", maxlength: "400", required: true }), h("small", null, "What you write about, your background, and any registration or qualification. Up to 400 characters.")),
+    h("div", { class: "row" }, h("button", { class: "btn solid", type: "submit" }, S.me.canEdit ? "Save byline" : "Request invitation")))];
+  const out = [head];
+  if (!isWriter()) { out.push(h("p", { class: "alert" }, "Your invitation request is with the editor. You can submit once it is approved.")); return out.concat(myPieces()); }
+  const d = draft(); const sec = SECTIONS[d.section] ? d.section : "finance";
+  const secSel = h("select", { id: "w-section", onchange: () => { keepDraft(); render(true); } }, Object.keys(SECTIONS).map((k) => h("option", { value: k, selected: k === sec }, SECTIONS[k].name)));
+  const warn = h("p", { class: "alert", id: "w-warn", hidden: true }, "This reads like investment advice (a call, a target or a promised return). XS publishes that only from SEBI-registered writers. Remove it, or enter your registration number.");
+  const body = h("textarea", { id: "w-body", required: true, oninput: () => { warn.hidden = !(val("w-section") === "finance" && ADVICE.test(body.value)); keepDraft(); } }); body.value = d.body || "";
+  const checks = ["Every factual claim is backed by a source listed below.", "I have disclosed any payment, gift, holding or affiliation, or I have none.", "The words are mine, or quoted briefly with credit.", "Any AI-made image, audio or video is labelled, or there is none.", SECTIONS[sec].check];
+  const form = h("form", { class: "sheet s-" + sec, onsubmit: submitPiece, oninput: keepDraft },
+    h("div", { class: "two" }, h("div", { class: "field" }, h("label", { for: "w-section" }, "Section"), secSel),
+      h("div", { class: "field" }, h("label", { for: "w-label" }, "Label"), h("select", { id: "w-label" }, LABELS.map((l) => h("option", { selected: l === d.label }, l))), h("small", null, "News reports facts. Analysis explains them. Opinion argues."))),
+    h("div", { class: "field" }, h("label", { for: "w-title" }, "Headline"), h("input", { type: "text", id: "w-title", maxlength: "120", required: true, value: d.title || "" })),
+    h("div", { class: "field" }, h("label", { for: "w-dek" }, "Standfirst"), h("input", { type: "text", id: "w-dek", maxlength: "220", value: d.dek || "" }), h("small", null, "One sentence under the headline.")),
+    h("fieldset", { class: "field" }, h("legend", null, "Image (optional)"),
+      h("input", { type: "file", id: "w-img", accept: "image/jpeg,image/png,image/webp", onchange: pickImage, "aria-label": "Choose an image" }), h("small", null, "One image, shown above the piece. XS resizes it. Use only an image you made or have the right to use."),
+      h("div", { id: "w-img-prev", class: "sheet" }),
+      h("div", { class: "two" }, h("div", { class: "field" }, h("label", { for: "w-alt" }, "Describe the image"), h("input", { type: "text", id: "w-alt", maxlength: "200", value: d.imageAlt || "" }), h("small", null, "Read aloud to readers who cannot see it.")),
+        h("div", { class: "field" }, h("label", { for: "w-credit" }, "Credit"), h("input", { type: "text", id: "w-credit", maxlength: "120", value: d.imageCredit || "" }), h("small", null, "Who made it, or where it is licensed from."))),
+      h("label", { class: "check" }, h("input", { type: "checkbox", id: "w-imgai", checked: !!d.imageAI }), h("span", null, "This image was made or altered with AI. Label it."))),
+    h("div", { class: "field" }, h("label", { for: "w-body" }, "Piece"), body, h("small", null, "Leave a blank line between paragraphs. Start a line with ## for a subheading."), warn),
+    h("div", { class: "field" }, h("label", { for: "w-sources" }, "Sources"), h("textarea", { id: "w-sources", class: "short", required: true }, d.sources || ""), h("small", null, "One per line: a link starting with https://, or the full name of a document, such as an Act and section or a named report.")),
+    h("div", { class: "field" }, h("label", { for: "w-disclosure" }, "Disclosure"), h("input", { type: "text", id: "w-disclosure", maxlength: "400", required: true, value: d.disclosure || "" }), h("small", null, sec === "finance" ? "State whether you or your family hold what you write about. Write None if you hold nothing." : sec === "politics" ? "State any party membership, campaign role or political payment. Write None if there is none." : "State any payment, gift, free product or employer link. Write None if there is none.")),
+    sec === "finance" && h("div", { class: "field" }, h("label", { for: "w-sebi" }, "SEBI registration number"), h("input", { type: "text", id: "w-sebi", maxlength: "40", value: d.sebiReg || "" }), h("small", null, "Only if you are a registered research analyst (INH and 9 digits) or investment adviser (INA and 9 digits).")),
+    h("label", { class: "check" }, h("input", { type: "checkbox", id: "w-sponsored", checked: !!d.sponsored }), h("span", null, "This piece is sponsored, or mentions something I was paid or gifted. Label it Sponsored.")),
+    h("fieldset", { class: "field" }, h("legend", null, "Before you submit"), checks.map((c, i) => h("label", { class: "check" }, h("input", { type: "checkbox", id: "ck-" + i, required: true }), h("span", null, c)))),
+    h("p", { class: "err", id: "w-err", hidden: true }),
+    h("div", { class: "row" }, h("button", { class: "btn solid", type: "submit", id: "w-go" }, canDirect(S.me.id, sec) ? "Publish now" : "Submit for review"), link("rules", "Read the house rules", "btn quiet")));
+  warn.hidden = !(sec === "finance" && ADVICE.test(body.value));
+  out.push(form);
+  setTimeout(showPick, 0);
+  return out.concat(myPieces());
+}
+function myPieces() {
+  if (!S.mine.length) return [];
+  const names = { submitted: "With the editor", returned: "Sent back", published: "Published", unpublished: "Unpublished by the editor" };
+  return [h("div", { class: "cols" }, h("section", { class: "col" }, h("h3", null, "Your pieces"),
+    h("p", { class: "meta" }, "You can unpublish your own piece at any time. XS keeps a record of every published piece, including unpublished ones."),
+    S.mine.map((m) => { const out = m.status === "published" && pulled(S.me.id, m.id); const live = m.status === "published" && !out;
+      return h("div", { class: "card s-" + m.section }, h("div", { class: "meta" }, h("span", { class: "sec" }, SECTIONS[m.section] ? SECTIONS[m.section].name : ""), h("span", { class: "tag" + (out ? " warn" : "") }, out ? "Unpublished by you" : (names[m.status] || m.status)), m.submittedAt && h("span", null, when(m.submittedAt))),
+        h("h3", null, live ? link("a-" + m.id, m.title) : m.title), m.status === "returned" && m.note && h("p", null, "Editor's note: " + m.note),
+        out && m.republishAsk && h("p", { class: "alert" }, "The editor asks to put this piece back on the site. It returns only if you accept."),
+        h("div", { class: "row" }, live && confirmBtn("Unpublish", "Confirm unpublish", () => withdraw(m, true)),
+          out && h("button", { class: "btn solid", type: "button", onclick: () => withdraw(m, false) }, m.republishAsk ? "Accept and republish" : "Put back on the site"),
+          out && m.republishAsk && h("button", { class: "btn quiet", type: "button", onclick: () => declineAsk(m) }, "Decline"),
+          (m.status === "returned" || m.status === "unpublished") && h("button", { class: "btn quiet", type: "button", onclick: () => { const { image, ...rest } = m; S.img = null; S.editingId = m.id; try { localStorage.setItem("xs-draft", JSON.stringify(rest)); } catch (e) {} render(true); window.scrollTo(0, 0); } }, "Load into the editor"))); })))];
+}
+
+function viewDesk() {
+  const head = h("div", { class: "pagehead" }, h("h1", null, "Desk"), h("p", null, "Review submissions, approve writers and handle reports."));
+  if (!S.me.canEdit) return [head, emptyState("The Desk is for the XS editor.")];
+  const tabs = h("div", { class: "tabs" }, [["review", "Review"], ["front", "Front page"], ["direct", "Spot-check"], ["writers", "Writers"], ["reports", "Reports"], ["archive", "Archive"]].map(([k, n]) => h("button", { class: "btn quiet", type: "button", "aria-pressed": String(S.desk.tab === k), onclick: () => { S.desk.tab = k; render(true); } }, n)),
+    h("button", { class: "btn quiet", type: "button", onclick: loadDesk }, "Refresh"));
+  const q = h("div", { class: "queue" });
+  if (S.desk.tab === "review") {
+    if (!S.desk.queue) q.append(emptyState("Loading submissions."));
+    else if (!S.desk.queue.length) q.append(emptyState("No submissions are waiting. When a writer submits, the piece appears here with its sources and disclosure."));
+    else for (const s of S.desk.queue) {
+      const note = h("input", { type: "text", id: "note-" + s.id, maxlength: "400", placeholder: "Note to the writer if you send it back" });
+      q.append(h("div", { class: "card s-" + s.section }, metaRow(Object.assign({ id: s.id }, s, { publishedAt: s.submittedAt }), true), h("h3", null, s.title), s.dek && h("p", { class: "dek" }, s.dek),
+        s.section === "finance" && ADVICE.test(s.body) && h("p", { class: "alert" }, "Contains wording that reads like investment advice." + (s.sebiReg ? " Writer gave SEBI registration " + s.sebiReg + ". Verify it." : " No SEBI registration given.")),
+        s.image && figure(s, true),
+        h("details", null, h("summary", null, "Read the piece"), prose(s.body)),
+        h("div", { class: "note" }, h("b", null, "Disclosure"), h("span", null, s.disclosure || "None given")), sourceList(s.sources),
+        s.sebiReg && h("p", { class: "alert" }, SEBI.test(s.sebiReg) ? "SEBI registration given: " + s.sebiReg + ". Look it up on SEBI's list of registered intermediaries before you publish." : "The registration number " + s.sebiReg + " is not in SEBI's format. Send the piece back."),
+        s.sebiReg && SEBI.test(s.sebiReg) && h("label", { class: "check" }, h("input", { type: "checkbox", id: "sebi-ok-" + s.id }), h("span", null, "I checked this number against SEBI's register.")),
+        h("div", { class: "field" }, note), h("div", { class: "row" }, h("button", { class: "btn solid", type: "button", onclick: () => publish(s) }, "Publish"), h("button", { class: "btn", type: "button", onclick: () => sendBack(s) }, "Send back"))));
+    }
+  } else if (S.desk.tab === "front") {
+    const chosen = S.articles.find((a) => a.id === S.leadId);
+    q.append(h("p", { class: "alert" }, chosen ? "You chose the lead story. It stays at the top of the front page until you change it or unpublish it." : "No lead story is chosen, so the newest piece leads the front page."));
+    if (!S.articles.length) q.append(emptyState("No published pieces yet. Once pieces are live, choose which one leads the front page here."));
+    for (const a of S.articles) { const isLead = a.id === S.leadId;
+      q.append(h("div", { class: "card s-" + a.section }, h("div", { class: "meta" }, isLead && h("span", { class: "tag warn" }, "Lead"), !chosen && a === S.articles[0] && h("span", { class: "tag" }, "Leading as newest"), h("span", { class: "sec" }, SECTIONS[a.section] ? SECTIONS[a.section].name : ""), h("span", null, when(a.publishedAt))), h("h3", null, link("a-" + a.id, a.title)),
+        h("div", { class: "row" }, h("button", { class: "btn" + (isLead ? " quiet" : ""), type: "button", onclick: () => setLead(isLead ? "" : a.id) }, isLead ? "Stop leading with this" : "Make lead")))); }
+  } else if (S.desk.tab === "archive") {
+    q.append(h("p", { class: "alert" }, "Unpublished pieces are kept here as a record. Readers cannot see them. You can restore a piece you unpublished. A piece its writer unpublished returns only if the writer accepts."));
+    if (!S.desk.archive) q.append(emptyState("Loading the archive."));
+    else if (!S.desk.archive.length && !S.pulled.length) q.append(emptyState("Nothing is archived. A piece you unpublish moves here with the date it came down."));
+    else for (const x of S.desk.archive) q.append(h("div", { class: "card s-" + x.section }, h("div", { class: "meta" }, h("span", { class: "sec" }, SECTIONS[x.section] ? SECTIONS[x.section].name : ""), h("span", null, byline(x)), x.publishedAt && h("span", null, "Published " + when(x.publishedAt)), h("span", null, "Unpublished " + when(x.unpublishedAt))),
+      h("h3", null, x.title), x.dek && h("p", { class: "dek" }, x.dek), h("details", null, h("summary", null, "Read the piece"), prose(x.body)),
+      h("div", { class: "row" }, h("button", { class: "btn", type: "button", onclick: () => restore(x) }, "Restore"), confirmBtn("Delete permanently", "Confirm permanent delete", () => purge(x)))));
+    for (const a of S.pulled) q.append(h("div", { class: "card s-" + a.section }, h("div", { class: "meta" }, h("span", { class: "tag warn" }, "Unpublished by the writer"), h("span", { class: "sec" }, SECTIONS[a.section] ? SECTIONS[a.section].name : ""), h("span", null, byline(a)), a.publishedAt && h("span", null, "Published " + when(a.publishedAt))),
+      h("h3", null, a.title), a.dek && h("p", { class: "dek" }, a.dek), h("details", null, h("summary", null, "Read the piece"), prose(a.body)),
+      h("div", { class: "row" }, h("button", { class: "btn", type: "button", onclick: () => askRepublish(a) }, "Ask the writer to republish"))));
+  } else if (S.desk.tab === "direct") {
+    const list = S.articles.filter((a) => a.direct);
+    if (!list.length) q.append(emptyState("No directly published pieces yet. Tech and Culture & Lifestyle pieces from writers with three editor-published pieces appear here for spot-checks."));
+    for (const a of list) q.append(h("div", { class: "card s-" + a.section }, metaRow(a, true), h("h3", null, link("a-" + a.id, a.title)), h("div", { class: "note" }, h("b", null, "Disclosure"), h("span", null, a.disclosure || "None given")), sourceList(a.sources)));
+  } else if (S.desk.tab === "writers") {
+    const ids = Object.keys(S.requests);
+    if (!ids.length) q.append(emptyState("No one has asked to write yet. A request appears here once a person signs in and fills in a byline."));
+    for (const id of ids) { const r = S.requests[id]; const ok = !!S.writers[id];
+      if (r.role === "editor") { q.append(h("div", { class: "card" }, h("div", { class: "meta" }, h("span", { class: "tag" }, "Editor")), h("h3", null, link("w-" + id, r.penName || "Editor")), h("p", null, r.bio || ""))); continue; }
+      q.append(h("div", { class: "card" }, h("div", { class: "meta" }, h("span", { class: "tag" + (ok ? "" : " warn") }, ok ? "Invited" : "Waiting"), r.at && h("span", null, when(r.at))), h("h3", null, link("w-" + id, r.penName || "Writer")), h("p", null, r.bio || ""),
+        ok && h("p", { class: "meta" }, editedCount(id) + " editor-published. Direct publishing in Tech and Culture & Lifestyle: " + (S.writers[id].direct === false ? "paused" : editedCount(id) >= 3 ? "on" : "after 3")),
+        h("div", { class: "row" }, ok && h("button", { class: "btn quiet", type: "button", onclick: () => setDirect(id, S.writers[id].direct === false) }, S.writers[id].direct === false ? "Allow direct publishing" : "Pause direct publishing"), ok ? confirmBtn("Withdraw invitation", "Confirm withdrawal", () => setWriter(id, false)) : h("button", { class: "btn solid", type: "button", onclick: () => setWriter(id, true) }, "Approve"))));
+    }
+  } else {
+    if (!S.desk.reports) q.append(emptyState("Loading reports."));
+    else if (!S.desk.reports.length) q.append(emptyState("No reports. A reader's report on a piece appears here with the reason and the date."));
+    else for (const r of S.desk.reports) q.append(h("div", { class: "card" }, h("div", { class: "meta" }, h("span", { class: "tag warn" }, r.reason), h("span", null, when(r.at))), h("h3", null, link("a-" + r.articleId, r.title || "Piece")), h("p", null, r.note || ""), h("div", { class: "row" }, h("button", { class: "btn quiet", type: "button", onclick: () => closeReport(r) }, "Mark handled"))));
+  }
+  return [head, tabs, q];
+}
+
+function render(force) {
+  const v = S.route.view;
+  const ae = document.activeElement;
+  if (!force && ae && main.contains(ae) && /^(INPUT|TEXTAREA|SELECT)$/.test(ae.tagName)) { chrome(); return; }
+  chrome();
+  const kids = v === "section" ? viewSection(S.route.id) : v === "article" ? viewArticle(S.route.id) : v === "author" ? viewAuthor(S.route.id) : v === "write" ? viewWrite() : v === "desk" ? viewDesk() : v === "saved" ? viewSaved() : v === "rules" ? viewRules() : v === "signin" ? viewSignin() : viewHome();
+  main.replaceChildren(...kids.filter(Boolean), footer());
+}
+function fail(e) { toast((e && e.message) ? e.message : "That did not save. Try again."); }
+async function run(query) { const { error } = await query; if (error) { fail(error); return false; } return true; }
+const ts = (v) => (v ? Date.parse(v) : null);
+function imageUrl(path) { return path ? SUPA_URL + "/storage/v1/object/public/" + BUCKET + "/" + path.split("/").map(encodeURIComponent).join("/") : ""; }
+
+function viewSignin() {
+  const head = h("div", { class: "pagehead" }, h("h1", null, "Sign in"), h("p", null, "Enter your email and XS sends you a sign-in link. No password. Readers sign in to like, save, comment and report. Writers sign in to write."));
+  if (S.me.id) return [head, h("p", { class: "alert" }, "You are signed in."), h("div", { class: "row" }, link("home", "Go to the front page", "btn solid"))];
+  return [head, h("form", { class: "sheet", onsubmit: sendLink },
+    h("div", { class: "field" }, h("label", { for: "si-email" }, "Email"), h("input", { type: "text", id: "si-email", inputmode: "email", autocomplete: "email", maxlength: "200", required: true })),
+    h("p", { class: "err", id: "si-msg", hidden: true }),
+    h("div", { class: "row" }, h("button", { class: "btn solid", type: "submit", id: "si-go" }, "Email me a sign-in link")))];
+}
+async function sendLink(ev) {
+  ev.preventDefault(); const email = val("si-email"); const msg = document.getElementById("si-msg"); const btn = document.getElementById("si-go");
+  if (!/^\S+@\S+\.\S+$/.test(email)) { msg.hidden = false; msg.textContent = "Enter a full email address, such as name@example.com."; return; }
+  btn.disabled = true;
+  const { error } = await S.db.auth.signInWithOtp({ email, options: { emailRedirectTo: location.origin + location.pathname } });
+  msg.hidden = false; msg.className = error ? "err" : "alert";
+  msg.textContent = error ? error.message : "Check " + email + " for a sign-in link. Open it on this device.";
+  if (error) btn.disabled = false;
+}
+async function signOut() { await S.db.auth.signOut(); S.me = { id: null, canEdit: false, canWrite: null }; await load(); go("home"); toast("Signed out"); }
+
+function norm(p, corr) {
+  return { id: p.id, raw: p.status, status: p.status === "unpublished_by_editor" ? "unpublished" : p.status === "unpublished_by_writer" ? "published" : p.status,
+    title: p.title, dek: p.dek, body: p.body, section: p.section, label: p.label, sources: p.sources, disclosure: p.disclosure, sponsored: p.sponsored, sebiReg: p.sebi_reg,
+    authorId: p.author_id, penName: p.sample ? "XS sample" : "", sample: p.sample, direct: p.direct,
+    publishedAt: ts(p.published_at), submittedAt: ts(p.submitted_at), unpublishedAt: ts(p.unpublished_at),
+    hasImage: !!p.image_path, image: imageUrl(p.image_path), imagePath: p.image_path, imageAlt: p.image_alt, imageCredit: p.image_credit, imageAI: p.image_ai,
+    note: p.editor_note, republishAsk: p.republish_requested, corrections: corr[p.id] || [] };
+}
+async function load() {
+  const sb = S.db;
+  const sess = await sb.auth.getSession(); const uid = sess.data && sess.data.session ? sess.data.session.user.id : null;
+  const [pf, pc, co, cm, lk, st] = await Promise.all([
+    sb.from("profiles").select("*"), sb.from("pieces").select("*").limit(1000), sb.from("corrections").select("*").order("created_at"),
+    sb.from("comments").select("*").order("created_at"), sb.from("likes").select("piece_id,user_id"), sb.from("settings").select("lead_piece_id").eq("id", 1).maybeSingle()]);
+  if (pc.error || pf.error) { S.loadError = (pc.error || pf.error).message; S.ready = false; return; }
+  S.loadError = "";
+  S.requests = {}; S.writers = {}; let myRole = "reader";
+  for (const p of pf.data) {
+    if (p.id === uid) myRole = p.role;
+    if (p.pen_name) S.requests[p.id] = { penName: p.pen_name, bio: p.bio || "", at: ts(p.created_at), role: p.role };
+    if (p.role === "writer" || p.role === "editor") S.writers[p.id] = { direct: !p.direct_paused };
+  }
+  S.me = { id: uid, canEdit: myRole === "editor", canWrite: uid ? true : null };
+  const corr = {}; for (const c of (co.data || [])) (corr[c.piece_id] = corr[c.piece_id] || []).push({ at: ts(c.created_at), text: c.body });
+  S.all = pc.data.map((p) => norm(p, corr));
+  S.articles = S.all.filter((p) => p.raw === "published").sort((a, b) => (b.publishedAt || 0) - (a.publishedAt || 0));
+  S.edited = S.articles.filter((p) => !p.direct);
+  S.mine = uid ? S.all.filter((p) => p.authorId === uid).sort((a, b) => (b.submittedAt || 0) - (a.submittedAt || 0)) : [];
+  S.pulled = S.all.filter((p) => p.raw === "unpublished_by_writer");
+  S.desk.queue = S.all.filter((p) => p.raw === "submitted").sort((a, b) => (a.submittedAt || 0) - (b.submittedAt || 0));
+  S.desk.archive = S.all.filter((p) => p.raw === "unpublished_by_editor").sort((a, b) => (b.unpublishedAt || 0) - (a.unpublishedAt || 0));
+  S.likes = {}; for (const l of (lk.data || [])) { (S.likes[l.user_id] = S.likes[l.user_id] || { ids: {} }).ids[l.piece_id] = true; }
+  S.comments = (cm.data || []).filter((c) => !c.hidden).map((c) => ({ id: c.id, by: c.author_id, articleId: c.piece_id, text: c.body, at: ts(c.created_at) }));
+  S.leadId = (st.data && st.data.lead_piece_id) || "";
+  S.saved = []; S.desk.reports = [];
+  if (uid) { const sv = await sb.from("saves").select("piece_id"); S.saved = (sv.data || []).map((r) => r.piece_id); }
+  if (S.me.canEdit) { const rp = await sb.from("reports").select("*").eq("handled", false).order("created_at", { ascending: false });
+    S.desk.reports = (rp.data || []).map((r) => { const p = S.all.find((x) => x.id === r.piece_id); return { id: r.id, articleId: r.piece_id, title: p ? p.title : "Piece", reason: r.reason, note: r.note, at: ts(r.created_at) }; }); }
+  S.ready = true;
+}
+async function refresh(force) { await load(); render(force); }
+async function loadDesk() { await refresh(true); toast("Up to date"); }
+async function act(query, done) { if (await run(query)) { await load(); if (done) toast(done); render(true); return true; } return false; }
+
+async function saveByline(ev) {
+  ev.preventDefault(); const penName = val("b-name"), bio = val("b-bio");
+  if (penName.length < 2) return toast("Enter a byline of at least 2 characters.");
+  await act(S.db.from("profiles").update({ pen_name: penName, bio, invite_requested: true }).eq("id", S.me.id), S.me.canEdit ? "Byline saved" : "Invitation requested");
+}
+async function uploadImage() {
+  if (!S.img) return null;
+  const blob = await (await fetch(S.img)).blob();
+  const path = S.me.id + "/" + (crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(36) + Math.random().toString(36).slice(2)) + ".jpg";
+  const { error } = await S.db.storage.from(BUCKET).upload(path, blob, { contentType: "image/jpeg", upsert: false });
+  if (error) throw error;
+  return path;
+}
+async function submitPiece(ev) {
+  ev.preventDefault(); const f = readForm(); const err = document.getElementById("w-err");
+  let msg = "";
+  if (f.title.length < 8) msg = "Give the piece a headline of at least 8 characters.";
+  else if (f.body.split(/\s+/).length < 80) msg = "The piece is under 80 words. Write more before you submit.";
+  else if (!sourcesOk(f.sources)) msg = "List at least one source. Each line must be a link starting with https://, or the full name of a document.";
+  else if (!disclosureOk(f.disclosure)) msg = "Write None in Disclosure, or describe the payment, gift, holding or affiliation in a full sentence.";
+  else if (f.sebiReg && !SEBI.test(f.sebiReg)) msg = "A SEBI registration number is INH or INA followed by 9 digits. Correct it, or leave the box empty.";
+  else if (f.section === "finance" && ADVICE.test(f.body) && !f.sebiReg) msg = "Remove the investment advice, or enter your SEBI registration number.";
+  else if (S.img && f.imageAlt.length < 5) msg = "Describe the image in a few words for readers who cannot see it.";
+  else if (S.img && f.imageCredit.length < 3) msg = "Add a credit for the image.";
+  err.hidden = !msg; err.textContent = msg; if (msg) return;
+  const btn = document.getElementById("w-go"); btn.disabled = true;
+  try {
+    const direct = canDirect(S.me.id, f.section);
+    const row = { section: f.section, label: f.label, title: f.title, dek: f.dek, body: f.body, sources: f.sources, disclosure: f.disclosure, sponsored: !!f.sponsored, sebi_reg: f.sebiReg || "" };
+    const editing = S.editingId && S.mine.find((m) => m.id === S.editingId && (m.raw === "returned" || m.raw === "unpublished_by_editor"));
+    const path = await uploadImage();
+    if (path) Object.assign(row, { image_path: path, image_alt: f.imageAlt, image_credit: f.imageCredit, image_ai: !!f.imageAI });
+    const q = editing ? S.db.from("pieces").update(Object.assign(row, { status: "submitted" })).eq("id", editing.id)
+                      : S.db.from("pieces").insert(Object.assign(row, { author_id: S.me.id, status: direct ? "published" : "submitted" }));
+    const { error } = await q; if (error) throw error;
+    try { localStorage.removeItem("xs-draft"); } catch (e) {}
+    S.img = null; S.editingId = null;
+    await load(); toast(direct && !editing ? "Published" : "Submitted for review"); render(true); window.scrollTo(0, 0);
+  } catch (e) { btn.disabled = false; err.hidden = false; err.textContent = (e && e.message) || "That did not save. Try again."; }
+}
+async function publish(s) {
+  if (s.sebiReg && !SEBI.test(s.sebiReg)) return toast("The SEBI number is not valid. Send the piece back.");
+  if (s.sebiReg && !val("sebi-ok-" + s.id)) return toast("Confirm you checked the SEBI number first.");
+  await act(S.db.from("pieces").update({ status: "published" }).eq("id", s.id), "Published");
+}
+async function sendBack(s) {
+  const note = val("note-" + s.id); if (!note) return toast("Write a note so the writer knows what to fix.");
+  await act(S.db.from("pieces").update({ status: "returned", editor_note: note }).eq("id", s.id), "Sent back to the writer");
+}
+async function setLead(id) { await act(S.db.from("settings").update({ lead_piece_id: id || null }).eq("id", 1), id ? "Lead story set" : "The newest piece leads again"); }
+async function setDirect(id, on) { await act(S.db.from("profiles").update({ direct_paused: !on }).eq("id", id), on ? "Direct publishing allowed" : "Direct publishing paused"); }
+async function setWriter(id, on) { await act(S.db.from("profiles").update({ role: on ? "writer" : "reader" }).eq("id", id), on ? "Writer approved" : "Invitation withdrawn"); }
+async function toggleLike(id) {
+  if (iLike(id)) await act(S.db.from("likes").delete().eq("piece_id", id).eq("user_id", S.me.id));
+  else await act(S.db.from("likes").insert({ piece_id: id, user_id: S.me.id }));
+}
+async function postComment(a) {
+  const text = val("c-text"); if (text.length < 2) return toast("Write your comment first.");
+  await act(S.db.from("comments").insert({ piece_id: a.id, author_id: S.me.id, body: text.slice(0, 1000) }), "Comment posted");
+}
+async function hideComment(c) { await act(S.db.from("comments").update({ hidden: true }).eq("id", c.id), c.by === S.me.id ? "Comment deleted" : "Comment hidden"); }
+async function addCorrection(a) {
+  const text = val("corr-text"); if (text.length < 3) return toast("Write the correction first.");
+  await act(S.db.from("corrections").insert({ piece_id: a.id, body: text, created_by: S.me.id }), "Correction added");
+}
+async function unpublish(a) {
+  if (!(await run(S.db.from("pieces").update({ status: "unpublished_by_editor" }).eq("id", a.id)))) return;
+  if (a.id === S.leadId) await run(S.db.from("settings").update({ lead_piece_id: null }).eq("id", 1));
+  await load(); toast("Unpublished. It is kept in the Archive."); go("home");
+}
+async function withdraw(m, on) { await act(S.db.from("pieces").update({ status: on ? "unpublished_by_writer" : "published" }).eq("id", m.id), on ? "Unpublished. XS keeps a record of the piece." : "Back on the site"); }
+async function declineAsk(m) { await act(S.db.from("pieces").update({ republish_requested: false }).eq("id", m.id), "Declined. The piece stays unpublished."); }
+async function askRepublish(a) { await act(S.db.from("pieces").update({ republish_requested: true }).eq("id", a.id), "Request sent. The piece returns if the writer accepts."); }
+async function restore(x) { await act(S.db.from("pieces").update({ status: "published" }).eq("id", x.id), "Restored to the site"); }
+async function purge(x) {
+  if (!(await run(S.db.from("pieces").delete().eq("id", x.id)))) return;
+  if (x.imagePath) await S.db.storage.from(BUCKET).remove([x.imagePath]).catch(() => {});
+  await load(); toast("Deleted permanently"); render(true);
+}
+async function toggleSave(id) {
+  if (S.saved.includes(id)) await act(S.db.from("saves").delete().eq("piece_id", id).eq("user_id", S.me.id), "Removed from Saved");
+  else await act(S.db.from("saves").insert({ piece_id: id, user_id: S.me.id }), "Saved");
+}
+async function sendReport(a, box) {
+  if (await run(S.db.from("reports").insert({ piece_id: a.id, reporter_id: S.me.id, reason: val("rep-reason"), note: val("rep-note") }))) { box.hidden = true; toast("Report sent to the editor"); }
+}
+async function closeReport(r) { await act(S.db.from("reports").update({ handled: true }).eq("id", r.id), "Marked handled"); }
+
+async function start() {
+  const token = location.hash.replace(/^#/, "");
+  S.route = /^(access_token|error|code)=/.test(token) ? { view: "home" } : parse(token);
+  render(true);
+  if (!window.supabase) { S.loadError = "the sign-in and data library did not load"; render(true); return; }
+  S.db = window.supabase.createClient(SUPA_URL, SUPA_KEY);
+  S.db.auth.onAuthStateChange((event) => { if (event === "SIGNED_IN" || event === "SIGNED_OUT" || event === "TOKEN_REFRESHED") setTimeout(() => refresh(false), 0); });
+  await refresh(true);
+  setInterval(() => { if (!document.hidden) refresh(false); }, 60000);
+}
+start();
+</script>
+</body>
+</html>
