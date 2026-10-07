@@ -349,6 +349,7 @@ function viewSaved() {
 function viewRules() {
   const grid = h("div", { class: "rules" }, h("section", null, h("h3", null, "Every writer"), h("ol", null, COMMON.map((r) => h("li", null, r)))));
   for (const k in SECTIONS) grid.append(h("section", { class: "s-" + k }, h("span", { class: "meta" }, h("span", { class: "sec" }, SECTIONS[k].name)), h("ol", null, SECTIONS[k].rules.map((r) => h("li", null, r)))));
+  grid.append(h("section", null, h("h3", null, "Usernames"), h("ol", null, ["Everyone who signs in chooses one username. It is shown as @name beside comments and on a writer page.", "You can change it once every 15 days. A change is final: you cannot go back to your old username, nobody can take it for 15 days, and after that it is open to anyone.", USERNAME_TERMS, "XS keeps a record of the usernames an account has used."].map((r) => h("li", null, r)))));
   return [h("div", { class: "pagehead" }, h("h1", null, "House rules"), h("p", null, "The short form of the XS Publisher Guidelines. Writers confirm these on every submission. The full guidelines name the law behind each rule. XS keeps a record of every piece it publishes, including pieces later unpublished by the editor or the writer, for as long as it may need them to answer a complaint or a legal notice.")), grid];
 }
 
@@ -536,7 +537,7 @@ async function load() {
   // Usernames are public: one list of account id and @name.
   const un = await sb.rpc("usernames"); S.handles = {}; for (const u of (un.data || [])) if (u.username) S.handles[u.id] = u.username;
   for (const p of Object.values(people)) if (p.username) S.handles[p.id] = p.username;
-  S.me = { id: uid, canEdit: myRole === "editor", canWrite: uid ? true : null, username: (uid && S.handles[uid]) || "", usernameChangedAt: (uid && people[uid] && ts(people[uid].username_changed_at)) || null };
+  S.me = { id: uid, canEdit: myRole === "editor", canWrite: uid ? true : null, username: (uid && S.handles[uid]) || "", usernameChangedAt: (uid && people[uid] && ts(people[uid].username_changed_at)) || null, usernameRemoved: (uid && people[uid] && people[uid].username_removed) || "" };
   const corr = {}; for (const c of (co.data || [])) (corr[c.piece_id] = corr[c.piece_id] || []).push({ at: ts(c.created_at), text: c.body });
   S.all = pc.data.map((p) => norm(p, corr));
   S.articles = S.all.filter((p) => p.raw === "published").sort((a, b) => (b.publishedAt || 0) - (a.publishedAt || 0));
@@ -553,6 +554,7 @@ async function load() {
   if (S.me.canEdit) { const rp = await sb.from("reports").select("*").eq("handled", false).order("created_at", { ascending: false });
     const [fl, rs, bw] = await Promise.all([sb.from("username_flags").select("*").eq("handled", false).order("created_at"), sb.from("reserved_usernames").select("*").order("username"), sb.from("banned_words").select("*").order("word")]);
     S.desk.flags = fl.data || []; S.desk.reserved = rs.data || []; S.desk.banned = bw.data || [];
+    const hi = await sb.from("username_history").select("*").order("created_at", { ascending: false }).limit(2000); S.desk.history = hi.data || [];
     S.desk.roles = {}; for (const p of Object.values(people)) S.desk.roles[p.id] = p.role;
     S.desk.reports = (rp.data || []).map((r) => { const p = S.all.find((x) => x.id === r.piece_id); return { id: r.id, articleId: r.piece_id, title: p ? p.title : "Piece", reason: r.reason, note: r.note, at: ts(r.created_at) }; }); }
   S.ready = true;
@@ -569,6 +571,8 @@ async function saveByline(ev) {
 const HANDLE = /^[a-z][a-z0-9_]{2,19}$/;
 function cleanHandle(v) { return (v || "").trim().toLowerCase().replace(/^@/, ""); }
 function handleOf(id) { return S.handles[id] ? "@" + S.handles[id] : ""; }
+const USERNAME_TERMS = "A username must not pose as another person, a company, a regulator, a government body or XS, and must not be abusive. Anyone signed in can flag a username. The editor can remove any username that breaks this rule, even if it was not reserved or banned beforehand; the person then chooses a new one and the removed name is not given out again.";
+const day = (t) => new Date(t).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" });
 function viewAccount() {
   const first = !S.me.username;
   const head = h("div", { class: "pagehead" }, h("h1", null, first ? "Choose your username" : "Your account"),
@@ -577,12 +581,14 @@ function viewAccount() {
   if (!S.me.id) return [head, h("p", { class: "alert" }, "Sign in first."), h("div", { class: "row" }, link("signin", "Sign in", "btn solid"))];
   const next = S.me.usernameChangedAt ? S.me.usernameChangedAt + 15 * 86400000 : 0; const locked = !first && next > Date.now();
   const out = [head];
-  if (!first) out.push(h("p", { class: "alert" }, "Your username is @" + S.me.username + ". " + (locked ? "You can change it again on " + new Date(next).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }) + "." : S.me.usernameChangedAt ? "You can change it now. After a change you wait 15 days before the next one." : "You can correct it once now. After that you can change it once every 15 days.")));
+  if (first && S.me.usernameRemoved) out.push(h("p", { class: "err" }, "The editor removed your username @" + S.me.usernameRemoved + " because it broke the username rule below. Choose a new one to continue."));
+  if (!first) out.push(h("p", { class: "alert" }, "Your username is @" + S.me.username + ". " + (locked ? "You can change it again on " + day(next) + "." : S.me.usernameChangedAt ? "You can change it now. After a change you wait 15 days before the next one." : "You can correct it once now. After that you can change it once every 15 days.")));
   if (!locked) out.push(h("form", { class: "sheet", onsubmit: saveUsername },
     h("div", { class: "field" }, h("label", { for: "u-name" }, first ? "Username" : "New username"), h("input", { type: "text", id: "u-name", maxlength: "21", autocomplete: "username", autocapitalize: "none", spellcheck: "false", required: true }),
-      h("small", null, "3 to 20 characters: letters, digits and underscore, starting with a letter. Capital letters become small letters. Do not use another person's or an organisation's name; the editor removes usernames that impersonate.")),
+      h("small", null, "3 to 20 characters: letters, digits and underscore, starting with a letter. Capital letters become small letters.")),
     h("p", { class: "err", id: "u-err", hidden: true }),
     h("div", { class: "row" }, h("button", { class: "btn solid", type: "submit", id: "u-go" }, first ? "Save username" : "Change username"))));
+  out.push(h("div", { class: "note" }, h("b", null, "Username rules"), h("span", null, "You can change your username once every 15 days. A change is final: you cannot go back to your old username, nobody can take it for 15 days, and after that it is open to anyone. " + USERNAME_TERMS)));
   return out;
 }
 async function saveUsername(ev) {
@@ -619,21 +625,27 @@ async function addListed(table, col, inputId, pattern, hint) {
 async function dropListed(table, col, v) { await act(S.db.from(table).delete().eq(col, v), "Removed " + v + " from the list"); }
 function deskUsernames(q) {
   const flags = S.desk.flags || [], reserved = S.desk.reserved || [], banned = S.desk.banned || [];
+  const hist = {}; for (const r of (S.desk.history || [])) (hist[r.user_id] = hist[r.user_id] || []).push(r);
+  const line = (r) => day(ts(r.created_at)) + ": " + (r.action === "removed" ? "@" + r.old_username + " removed by the editor" : r.action === "changed" ? "@" + r.old_username + " changed to @" + r.new_username : "chose @" + r.new_username);
+  const trail = (id) => h("details", null, h("summary", null, "Account ID and username history"), h("p", { class: "meta" }, "Account ID: " + id), h("ol", null, (hist[id] || []).slice().reverse().map((r) => h("li", null, line(r)))));
   q.append(h("h3", null, "Flagged usernames" + (flags.length ? " · " + flags.length : "")));
   if (!flags.length) q.append(emptyState("No flags. When a person flags a username, it appears here with the reason."));
   for (const f of flags) { const current = S.handles[f.target_id];
     q.append(h("div", { class: "card" }, h("div", { class: "meta" }, h("span", { class: "tag warn" }, f.reason), h("span", null, when(ts(f.created_at))), f.reporter_id && handleOf(f.reporter_id) && h("span", null, "Flagged by " + handleOf(f.reporter_id))),
       h("h3", null, "@" + f.username), current !== f.username && h("p", { class: "meta" }, current ? "This account now uses @" + current + "." : "This account no longer has a username."),
-      h("div", { class: "row" }, current && confirmBtn("Remove @" + current, "Confirm removal", () => removeUsername(f.target_id)), h("button", { class: "btn quiet", type: "button", onclick: () => dismissFlag(f) }, "Dismiss flag")))); }
+      trail(f.target_id), h("div", { class: "row" }, current && confirmBtn("Remove @" + current, "Confirm removal", () => removeUsername(f.target_id)), h("button", { class: "btn quiet", type: "button", onclick: () => dismissFlag(f) }, "Dismiss flag")))); }
   const ids = Object.keys(S.handles).sort((a, b) => S.handles[a].localeCompare(S.handles[b]));
   q.append(h("h3", null, "All usernames · " + ids.length), h("p", { class: "meta" }, "Readers, writers and the editor. Removing a username reserves that name and asks the person to choose a new one."));
-  const find = h("input", { type: "text", id: "un-find", placeholder: "Find a username", "aria-label": "Find a username", maxlength: "20" });
+  const find = h("input", { type: "text", id: "un-find", placeholder: "Find by current or past username, or account ID", "aria-label": "Find by current or past username, or account ID", maxlength: "36" });
   const rows = h("div", { class: "queue" });
-  const draw = () => { const t = cleanHandle(find.value); rows.replaceChildren(...ids.filter((id) => !t || S.handles[id].includes(t)).slice(0, 200).map((id) =>
+  const draw = () => { const t = cleanHandle(find.value); rows.replaceChildren(...ids.filter((id) => !t || S.handles[id].includes(t) || id.toLowerCase().startsWith(t) || (hist[id] || []).some((r) => (r.old_username || "").includes(t))).slice(0, 200).map((id) =>
     h("div", { class: "card" }, h("div", { class: "meta" }, h("span", { class: "tag" }, ({ editor: "Editor", writer: "Writer" })[S.desk.roles && S.desk.roles[id]] || "Reader"), S.requests[id] && h("span", null, S.requests[id].penName)),
-      h("h3", null, "@" + S.handles[id]), id !== S.me.id && h("div", { class: "row" }, confirmBtn("Remove username", "Confirm removal", () => removeUsername(id)))))); };
+      h("h3", null, "@" + S.handles[id]), trail(id), id !== S.me.id && h("div", { class: "row" }, confirmBtn("Remove username", "Confirm removal", () => removeUsername(id)))))); };
   find.addEventListener("input", draw); draw();
   q.append(h("div", { class: "field" }, find), rows);
+  const log = (S.desk.history || []).slice(0, 100);
+  q.append(h("div", { class: "card" }, h("h3", null, "Username log"), h("p", { class: "meta" }, "Every username chosen, changed or removed, newest first. The log is permanent and only the editor can read it. It includes accounts whose username was removed and not yet replaced."),
+    h("details", null, h("summary", null, "Show the latest " + log.length), h("ol", null, log.map((r) => h("li", null, line(r) + " (account " + r.user_id + ")"))))));
   const listBox = (title, note, items, table, col, inputId, pattern, hint, label) => h("div", { class: "card" }, h("h3", null, title + " · " + items.length), h("p", { class: "meta" }, note),
     h("div", { class: "row" }, h("input", { type: "text", id: inputId, maxlength: "20", "aria-label": label, placeholder: label }), h("button", { class: "btn", type: "button", onclick: () => addListed(table, col, inputId, pattern, hint) }, "Add")),
     h("details", null, h("summary", null, "Show the list"), h("div", { class: "row" }, items.map((it) => h("span", { class: "tag" + (it.why === "removed" ? " warn" : "") }, it[col] + (it.why === "removed" ? " (removed)" : ""), " ", h("button", { class: "btn quiet", type: "button", "aria-label": "Take " + it[col] + " off the list", onclick: () => dropListed(table, col, it[col]) }, "×"))))));
