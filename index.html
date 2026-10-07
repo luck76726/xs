@@ -157,7 +157,7 @@ const DIRECT = ["tech", "culture"];
 const PIC = /^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+\/=]+$/;
 const ADVICE = /\b(target price|price target|stop[- ]?loss|multibagger|guaranteed returns?|assured returns?|buy (call|rating|now)|sell (call|rating)|strong buy|accumulate at)\b/i;
 
-const S = { ready: false, db: null, user: null, articles: [], edited: [], directRaw: [], likes: {}, comments: [], img: null, pics: {}, leadId: "", all: [], pulled: [], editingId: null, loadError: "", writers: {}, requests: {}, mine: [], saved: [], me: { id: null, canEdit: false, canWrite: null }, route: { view: "home" }, desk: { tab: "review", queue: null, reports: null, archive: null } };
+const S = { ready: false, db: null, user: null, articles: [], edited: [], directRaw: [], likes: {}, comments: [], img: null, pics: {}, leadId: "", all: [], pulled: [], editingId: null, loadError: "", handles: {}, writers: {}, requests: {}, mine: [], saved: [], me: { id: null, canEdit: false, canWrite: null }, route: { view: "home" }, desk: { tab: "review", queue: null, reports: null, archive: null } };
 const main = document.getElementById("main");
 
 function h(tag, attrs, ...kids) {
@@ -215,7 +215,7 @@ function parse(token) {
   if (SECTIONS[token]) return { view: "section", id: token };
   if (token.slice(0, 2) === "a-") return { view: "article", id: token.slice(2) };
   if (token.slice(0, 2) === "w-") return { view: "author", id: token.slice(2) };
-  if (["write", "desk", "saved", "rules", "signin"].includes(token)) return { view: token };
+  if (["write", "desk", "saved", "rules", "signin", "account"].includes(token)) return { view: token };
   return { view: "home" };
 }
 function go(token) { S.route = parse(token); try { if (location.hash.replace(/^#/, "") !== token) location.hash = token; } catch (e) {} render(true); window.scrollTo(0, 0); }
@@ -230,6 +230,7 @@ function chrome() {
   if (S.me.canEdit) tools.append(link("desk", "Desk", "btn quiet"));
   tools.append(link("write", "Write", "btn solid"));
   // Until the first check finishes, XS does not yet know whether you are signed in, so it shows neither button.
+  if (S.ready && S.me.id) tools.append(link("account", S.me.username ? "@" + S.me.username : "Account", "btn quiet"));
   if (S.ready) tools.append(S.me.id ? h("button", { class: "btn quiet", type: "button", onclick: signOut }, "Sign out") : link("signin", "Sign in", "btn quiet"));
 }
 
@@ -319,9 +320,9 @@ function commentsBlock(a) {
   const spans = {};
   for (const c of list) {
     const pen = S.requests[c.by] && S.requests[c.by].penName;
-    const name = h("span", null, pen || "Reader"); if (!pen) (spans[c.by] = spans[c.by] || []).push(name);
+    const name = h("span", null, [pen, handleOf(c.by)].filter(Boolean).join(" ") || "Reader");
     box.append(h("div", { class: "card" }, h("div", { class: "meta" }, name, h("span", null, when(c.at))), h("p", null, c.text),
-      (S.me.canEdit || c.by === S.me.id) && h("div", { class: "row" }, confirmBtn(c.by === S.me.id ? "Delete" : "Hide", "Confirm", () => hideComment(c)))));
+      h("div", { class: "row" }, (S.me.canEdit || c.by === S.me.id) && confirmBtn(c.by === S.me.id ? "Delete" : "Hide", "Confirm", () => hideComment(c)), flagControl(c.by))));
   }
   const ids = Object.keys(spans);
     if (!list.length) box.append(h("p", { class: "meta" }, "No comments yet."));
@@ -338,7 +339,7 @@ function confirmBtn(label, confirmLabel, fn) {
 }
 function viewAuthor(id) {
   const r = S.requests[id] || {}; const list = S.articles.filter((a) => a.authorId === id);
-  return [h("div", { class: "pagehead" }, h("span", { class: "meta" }, S.writers[id] ? "Invited writer" : "Writer"), h("h1", null, r.penName || "Writer"), r.bio && h("p", null, r.bio)),
+  return [h("div", { class: "pagehead" }, h("span", { class: "meta" }, S.writers[id] ? "Invited writer" : "Writer"), h("h1", null, r.penName || "Writer"), handleOf(id) && h("p", { class: "meta" }, handleOf(id)), r.bio && h("p", null, r.bio), flagControl(id)),
     list.length ? h("div", { class: "list" }, list.map((a) => item(a))) : emptyState("No published pieces from this writer yet.")];
 }
 function viewSaved() {
@@ -415,7 +416,7 @@ function myPieces() {
 function viewDesk() {
   const head = h("div", { class: "pagehead" }, h("h1", null, "Desk"), h("p", null, "Review submissions, approve writers and handle reports."));
   if (!S.me.canEdit) return [head, emptyState("The Desk is for the XS editor.")];
-  const tabs = h("div", { class: "tabs" }, [["review", "Review"], ["front", "Front page"], ["direct", "Spot-check"], ["writers", "Writers"], ["reports", "Reports"], ["archive", "Archive"]].map(([k, n]) => h("button", { class: "btn quiet", type: "button", "aria-pressed": String(S.desk.tab === k), onclick: () => { S.desk.tab = k; render(true); } }, n)),
+  const tabs = h("div", { class: "tabs" }, [["review", "Review"], ["front", "Front page"], ["direct", "Spot-check"], ["writers", "Writers"], ["names", "Usernames" + (S.desk.flags && S.desk.flags.length ? " · " + S.desk.flags.length : "")], ["reports", "Reports"], ["archive", "Archive"]].map(([k, n]) => h("button", { class: "btn quiet", type: "button", "aria-pressed": String(S.desk.tab === k), onclick: () => { S.desk.tab = k; render(true); } }, n)),
     h("button", { class: "btn quiet", type: "button", onclick: loadDesk }, "Refresh"));
   const q = h("div", { class: "queue" });
   if (S.desk.tab === "review") {
@@ -457,11 +458,13 @@ function viewDesk() {
     const ids = Object.keys(S.requests);
     if (!ids.length) q.append(emptyState("No one has asked to write yet. A request appears here once a person signs in and fills in a byline."));
     for (const id of ids) { const r = S.requests[id]; const ok = !!S.writers[id];
-      if (r.role === "editor") { q.append(h("div", { class: "card" }, h("div", { class: "meta" }, h("span", { class: "tag" }, "Editor")), h("h3", null, link("w-" + id, r.penName || "Editor")), h("p", null, r.bio || ""))); continue; }
-      q.append(h("div", { class: "card" }, h("div", { class: "meta" }, h("span", { class: "tag" + (ok ? "" : " warn") }, ok ? "Invited" : "Waiting"), r.at && h("span", null, when(r.at))), h("h3", null, link("w-" + id, r.penName || "Writer")), h("p", null, r.bio || ""),
+      if (r.role === "editor") { q.append(h("div", { class: "card" }, h("div", { class: "meta" }, h("span", { class: "tag" }, "Editor"), handleOf(id) && h("span", null, handleOf(id))), h("h3", null, link("w-" + id, r.penName || "Editor")), h("p", null, r.bio || ""))); continue; }
+      q.append(h("div", { class: "card" }, h("div", { class: "meta" }, h("span", { class: "tag" + (ok ? "" : " warn") }, ok ? "Invited" : "Waiting"), handleOf(id) && h("span", null, handleOf(id)), r.at && h("span", null, when(r.at))), h("h3", null, link("w-" + id, r.penName || "Writer")), h("p", null, r.bio || ""),
         ok && h("p", { class: "meta" }, editedCount(id) + " editor-published. Direct publishing in Tech and Culture & Lifestyle: " + (S.writers[id].direct === false ? "paused" : editedCount(id) >= 3 ? "on" : "after 3")),
         h("div", { class: "row" }, ok && h("button", { class: "btn quiet", type: "button", onclick: () => setDirect(id, S.writers[id].direct === false) }, S.writers[id].direct === false ? "Allow direct publishing" : "Pause direct publishing"), ok ? confirmBtn("Withdraw invitation", "Confirm withdrawal", () => setWriter(id, false)) : h("button", { class: "btn solid", type: "button", onclick: () => setWriter(id, true) }, "Approve"))));
     }
+  } else if (S.desk.tab === "names") {
+    deskUsernames(q);
   } else {
     if (!S.desk.reports) q.append(emptyState("Loading reports."));
     else if (!S.desk.reports.length) q.append(emptyState("No reports. A reader's report on a piece appears here with the reason and the date."));
@@ -475,7 +478,8 @@ function render(force) {
   const ae = document.activeElement;
   if (!force && ae && main.contains(ae) && /^(INPUT|TEXTAREA|SELECT)$/.test(ae.tagName)) { chrome(); return; }
   chrome();
-  const kids = v === "section" ? viewSection(S.route.id) : v === "article" ? viewArticle(S.route.id) : v === "author" ? viewAuthor(S.route.id) : v === "write" ? viewWrite() : v === "desk" ? viewDesk() : v === "saved" ? viewSaved() : v === "rules" ? viewRules() : v === "signin" ? viewSignin() : viewHome();
+  // Signed in without a username: choose one first. The house rules stay readable.
+  const kids = (S.ready && S.me.id && !S.me.username && v !== "rules") || v === "account" ? viewAccount() : v === "section" ? viewSection(S.route.id) : v === "article" ? viewArticle(S.route.id) : v === "author" ? viewAuthor(S.route.id) : v === "write" ? viewWrite() : v === "desk" ? viewDesk() : v === "saved" ? viewSaved() : v === "rules" ? viewRules() : v === "signin" ? viewSignin() : viewHome();
   main.replaceChildren(...kids.filter(Boolean), footer());
 }
 function fail(e) { toast((e && e.message) ? e.message : "That did not save. Try again."); }
@@ -529,7 +533,10 @@ async function load() {
     if (p.pen_name) S.requests[p.id] = { penName: p.pen_name, bio: p.bio || "", at: ts(p.created_at), role: p.role };
     if (p.role === "writer" || p.role === "editor") S.writers[p.id] = { direct: !p.direct_paused };
   }
-  S.me = { id: uid, canEdit: myRole === "editor", canWrite: uid ? true : null };
+  // Usernames are public: one list of account id and @name.
+  const un = await sb.rpc("usernames"); S.handles = {}; for (const u of (un.data || [])) if (u.username) S.handles[u.id] = u.username;
+  for (const p of Object.values(people)) if (p.username) S.handles[p.id] = p.username;
+  S.me = { id: uid, canEdit: myRole === "editor", canWrite: uid ? true : null, username: (uid && S.handles[uid]) || "", usernameChangedAt: (uid && people[uid] && ts(people[uid].username_changed_at)) || null };
   const corr = {}; for (const c of (co.data || [])) (corr[c.piece_id] = corr[c.piece_id] || []).push({ at: ts(c.created_at), text: c.body });
   S.all = pc.data.map((p) => norm(p, corr));
   S.articles = S.all.filter((p) => p.raw === "published").sort((a, b) => (b.publishedAt || 0) - (a.publishedAt || 0));
@@ -544,6 +551,9 @@ async function load() {
   S.saved = []; S.desk.reports = [];
   if (uid) { const sv = await sb.from("saves").select("piece_id"); S.saved = (sv.data || []).map((r) => r.piece_id); }
   if (S.me.canEdit) { const rp = await sb.from("reports").select("*").eq("handled", false).order("created_at", { ascending: false });
+    const [fl, rs, bw] = await Promise.all([sb.from("username_flags").select("*").eq("handled", false).order("created_at"), sb.from("reserved_usernames").select("*").order("username"), sb.from("banned_words").select("*").order("word")]);
+    S.desk.flags = fl.data || []; S.desk.reserved = rs.data || []; S.desk.banned = bw.data || [];
+    S.desk.roles = {}; for (const p of Object.values(people)) S.desk.roles[p.id] = p.role;
     S.desk.reports = (rp.data || []).map((r) => { const p = S.all.find((x) => x.id === r.piece_id); return { id: r.id, articleId: r.piece_id, title: p ? p.title : "Piece", reason: r.reason, note: r.note, at: ts(r.created_at) }; }); }
   S.ready = true;
 }
@@ -556,6 +566,81 @@ async function saveByline(ev) {
   if (penName.length < 2) return toast("Enter a byline of at least 2 characters.");
   await act(S.db.from("profiles").update({ pen_name: penName, bio, invite_requested: true }).eq("id", S.me.id), S.me.canEdit ? "Byline saved" : "Invitation requested");
 }
+const HANDLE = /^[a-z][a-z0-9_]{2,19}$/;
+function cleanHandle(v) { return (v || "").trim().toLowerCase().replace(/^@/, ""); }
+function handleOf(id) { return S.handles[id] ? "@" + S.handles[id] : ""; }
+function viewAccount() {
+  const first = !S.me.username;
+  const head = h("div", { class: "pagehead" }, h("h1", null, first ? "Choose your username" : "Your account"),
+    h("p", null, first ? "Everyone on XS has one username. It appears as @name next to your comments, and on your writer page if you write for XS. Choose it before you continue." : "Your username appears as @name next to your comments, and on your writer page if you write for XS."));
+  if (!S.ready) return [head, emptyState("Checking your account.")];
+  if (!S.me.id) return [head, h("p", { class: "alert" }, "Sign in first."), h("div", { class: "row" }, link("signin", "Sign in", "btn solid"))];
+  const next = S.me.usernameChangedAt ? S.me.usernameChangedAt + 15 * 86400000 : 0; const locked = !first && next > Date.now();
+  const out = [head];
+  if (!first) out.push(h("p", { class: "alert" }, "Your username is @" + S.me.username + ". " + (locked ? "You can change it again on " + new Date(next).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }) + "." : S.me.usernameChangedAt ? "You can change it now. After a change you wait 15 days before the next one." : "You can correct it once now. After that you can change it once every 15 days.")));
+  if (!locked) out.push(h("form", { class: "sheet", onsubmit: saveUsername },
+    h("div", { class: "field" }, h("label", { for: "u-name" }, first ? "Username" : "New username"), h("input", { type: "text", id: "u-name", maxlength: "21", autocomplete: "username", autocapitalize: "none", spellcheck: "false", required: true }),
+      h("small", null, "3 to 20 characters: letters, digits and underscore, starting with a letter. Capital letters become small letters. Do not use another person's or an organisation's name; the editor removes usernames that impersonate.")),
+    h("p", { class: "err", id: "u-err", hidden: true }),
+    h("div", { class: "row" }, h("button", { class: "btn solid", type: "submit", id: "u-go" }, first ? "Save username" : "Change username"))));
+  return out;
+}
+async function saveUsername(ev) {
+  ev.preventDefault(); const name = cleanHandle(val("u-name")); const err = document.getElementById("u-err"); const btn = document.getElementById("u-go");
+  const show = (m) => { err.hidden = !m; err.textContent = m; };
+  if (!HANDLE.test(name)) return show("A username is 3 to 20 characters: letters, digits and underscore, starting with a letter.");
+  if (name === S.me.username) return show("That is already your username.");
+  btn.disabled = true; show("");
+  const { error } = await S.db.rpc("set_username", { wanted: name });
+  if (error) { btn.disabled = false; return show(error.message || "That did not save. Try again."); }
+  await load(); toast("Your username is @" + name); render(true);
+}
+// A small "Flag username" control: pick a reason, then send it to the editor.
+function flagControl(id) {
+  if (!S.me.id || id === S.me.id || !S.handles[id]) return null;
+  const wrap = h("span", { class: "row" });
+  const open = h("button", { class: "btn quiet", type: "button" }, "Flag username");
+  open.addEventListener("click", () => {
+    const sel = h("select", { "aria-label": "Why are you flagging " + handleOf(id) }, ["Poses as another person or organisation", "Abusive or obscene", "Hateful", "Other"].map((r) => h("option", null, r)));
+    wrap.replaceChildren(sel, h("button", { class: "btn", type: "button", onclick: () => flagUsername(id, sel.value, wrap) }, "Send flag"));
+  });
+  wrap.append(open); return wrap;
+}
+async function flagUsername(id, why, wrap) {
+  const { error } = await S.db.rpc("flag_username", { target: id, why });
+  if (error) return fail(error);
+  wrap.replaceChildren(h("span", { class: "meta" }, "Flag sent to the editor")); toast("Flag sent to the editor");
+}
+async function dismissFlag(f) { await act(S.db.from("username_flags").update({ handled: true }).eq("id", f.id), "Flag dismissed"); }
+async function addListed(table, col, inputId, pattern, hint) {
+  const v = cleanHandle(val(inputId)); if (!pattern.test(v)) return toast(hint);
+  await act(S.db.from(table).insert({ [col]: v }), "Added " + v);
+}
+async function dropListed(table, col, v) { await act(S.db.from(table).delete().eq(col, v), "Removed " + v + " from the list"); }
+function deskUsernames(q) {
+  const flags = S.desk.flags || [], reserved = S.desk.reserved || [], banned = S.desk.banned || [];
+  q.append(h("h3", null, "Flagged usernames" + (flags.length ? " · " + flags.length : "")));
+  if (!flags.length) q.append(emptyState("No flags. When a person flags a username, it appears here with the reason."));
+  for (const f of flags) { const current = S.handles[f.target_id];
+    q.append(h("div", { class: "card" }, h("div", { class: "meta" }, h("span", { class: "tag warn" }, f.reason), h("span", null, when(ts(f.created_at))), f.reporter_id && handleOf(f.reporter_id) && h("span", null, "Flagged by " + handleOf(f.reporter_id))),
+      h("h3", null, "@" + f.username), current !== f.username && h("p", { class: "meta" }, current ? "This account now uses @" + current + "." : "This account no longer has a username."),
+      h("div", { class: "row" }, current && confirmBtn("Remove @" + current, "Confirm removal", () => removeUsername(f.target_id)), h("button", { class: "btn quiet", type: "button", onclick: () => dismissFlag(f) }, "Dismiss flag")))); }
+  const ids = Object.keys(S.handles).sort((a, b) => S.handles[a].localeCompare(S.handles[b]));
+  q.append(h("h3", null, "All usernames · " + ids.length), h("p", { class: "meta" }, "Readers, writers and the editor. Removing a username reserves that name and asks the person to choose a new one."));
+  const find = h("input", { type: "text", id: "un-find", placeholder: "Find a username", "aria-label": "Find a username", maxlength: "20" });
+  const rows = h("div", { class: "queue" });
+  const draw = () => { const t = cleanHandle(find.value); rows.replaceChildren(...ids.filter((id) => !t || S.handles[id].includes(t)).slice(0, 200).map((id) =>
+    h("div", { class: "card" }, h("div", { class: "meta" }, h("span", { class: "tag" }, ({ editor: "Editor", writer: "Writer" })[S.desk.roles && S.desk.roles[id]] || "Reader"), S.requests[id] && h("span", null, S.requests[id].penName)),
+      h("h3", null, "@" + S.handles[id]), id !== S.me.id && h("div", { class: "row" }, confirmBtn("Remove username", "Confirm removal", () => removeUsername(id)))))); };
+  find.addEventListener("input", draw); draw();
+  q.append(h("div", { class: "field" }, find), rows);
+  const listBox = (title, note, items, table, col, inputId, pattern, hint, label) => h("div", { class: "card" }, h("h3", null, title + " · " + items.length), h("p", { class: "meta" }, note),
+    h("div", { class: "row" }, h("input", { type: "text", id: inputId, maxlength: "20", "aria-label": label, placeholder: label }), h("button", { class: "btn", type: "button", onclick: () => addListed(table, col, inputId, pattern, hint) }, "Add")),
+    h("details", null, h("summary", null, "Show the list"), h("div", { class: "row" }, items.map((it) => h("span", { class: "tag" + (it.why === "removed" ? " warn" : "") }, it[col] + (it.why === "removed" ? " (removed)" : ""), " ", h("button", { class: "btn quiet", type: "button", "aria-label": "Take " + it[col] + " off the list", onclick: () => dropListed(table, col, it[col]) }, "×"))))));
+  q.append(listBox("Reserved names", "Exact names nobody but the editor can take. Names you remove from an account are added here.", reserved, "reserved_usernames", "username", "un-reserve", /^[a-z0-9_]{1,20}$/, "A reserved name is 1 to 20 letters, digits or underscores.", "Name to reserve"),
+    listBox("Banned words", "A username that contains one of these words anywhere is refused.", banned, "banned_words", "word", "un-ban", /^[a-z0-9_]{3,20}$/, "A banned word is 3 to 20 letters, digits or underscores.", "Word to ban"));
+}
+async function removeUsername(id) { const { error } = await S.db.rpc("remove_username", { target: id }); if (error) return fail(error); await load(); toast("Username removed"); render(true); }
 async function uploadImage() {
   if (!S.img) return null;
   const blob = await (await fetch(S.img)).blob();
