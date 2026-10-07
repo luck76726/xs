@@ -69,6 +69,33 @@ h1, h2, h3 { text-wrap: balance; margin: 0; line-height: 1.12; letter-spacing: -
 .rail { display: grid; gap: 20px; align-content: start; border-left: 1px solid var(--line); padding-left: 24px }
 .item h3 { font-size: 20px; font-weight: 600 }
 .item .dek { font-size: 16px }
+.conveyor { border: 2px solid var(--ink); padding: 16px; display: grid; gap: 4px; align-content: start }
+.conveyor h2 { font-family: var(--mono); font-size: 12px; text-transform: uppercase; letter-spacing: .08em; font-weight: 500 }
+.conveyor .window { overflow: hidden }
+.conveyor .window.moving { height: 400px }
+.conveyor ol { list-style: none; margin: 0; padding: 0 }
+.conveyor li { display: grid; gap: 4px; padding: 12px 0; border-bottom: 1px solid var(--line); overflow-wrap: anywhere }
+.conveyor .ch { font-weight: 700; font-size: 17px; line-height: 1.25; text-decoration: none }
+.conveyor .ch:hover { text-decoration: underline }
+.conveyor .cd { color: var(--ink-2); font-size: 14px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden }
+.belt { animation: belt linear infinite }
+@keyframes belt { to { transform: translateY(-50%) } }
+.conveyor .window:hover .belt, .conveyor .window:focus-within .belt { animation-play-state: paused }
+@media (prefers-reduced-motion: reduce) { .belt { animation: none } .conveyor .window.moving { overflow-y: auto } }
+.av { width: 36px; height: 36px; border-radius: 50%; object-fit: cover; flex: none; display: inline-grid; place-items: center; background: var(--line); color: var(--ink); font-weight: 700; font-size: 15px }
+.av.lg { width: 48px; height: 48px; font-size: 19px }
+.av.xl { width: 96px; height: 96px; font-size: 36px }
+.byl { display: flex; gap: 12px; align-items: center }
+.byl a { font-weight: 700; text-decoration: none }
+.comment { display: flex; gap: 12px; align-items: flex-start; padding: 14px 0; border-top: 1px solid var(--line) }
+.comment.reply { margin-left: 48px }
+.cbody { display: grid; gap: 8px; min-width: 0; flex: 1 }
+.ctext { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere }
+.cform { display: grid; gap: 10px; padding: 14px 0; border-top: 1px solid var(--line) }
+.cform.reply { margin-left: 48px }
+.links { display: flex; gap: 14px; flex-wrap: wrap; font-size: 14px }
+.sheet + .sheet, .sheet + .note, .alert + .sheet, .card + .sheet { margin-top: 32px }
+@media (max-width: 560px) { .comment.reply, .cform.reply { margin-left: 20px } }
 .cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 28px; margin-top: 40px; padding-top: 24px; border-top: 2px solid var(--ink) }
 .col { display: grid; gap: 18px; align-content: start; min-width: 0 }
 .col > .sec { font-family: var(--mono); font-size: 13px }
@@ -136,6 +163,7 @@ footer { border-top: 1px solid var(--line); margin-top: 48px; padding-top: 16px;
 const SUPA_URL = "https://bysumjjojjlzqafggnmy.supabase.co";
 const SUPA_KEY = "sb_publishable_pu4TtLaFkvOkKqLezaQ0cg_08Yvi36R";   // publishable key: safe to ship in the page
 const BUCKET = "piece-images";
+const SITE_URL = "https://luck76726.github.io/xs/";   // the public address of XS; change it when XS moves to its own domain
 const SECTIONS = {
   finance: { name: "Finance", line: "Markets, money and policy. News, analysis and education. No investment advice.",
     check: "This piece gives no buy, sell or hold call, no price target and no promised return.",
@@ -157,7 +185,7 @@ const DIRECT = ["tech", "culture"];
 const PIC = /^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+\/=]+$/;
 const ADVICE = /\b(target price|price target|stop[- ]?loss|multibagger|guaranteed returns?|assured returns?|buy (call|rating|now)|sell (call|rating)|strong buy|accumulate at)\b/i;
 
-const S = { ready: false, db: null, user: null, articles: [], edited: [], directRaw: [], likes: {}, comments: [], img: null, pics: {}, leadId: "", all: [], pulled: [], editingId: null, loadError: "", handles: {}, writers: {}, requests: {}, mine: [], saved: [], me: { id: null, canEdit: false, canWrite: null }, route: { view: "home" }, desk: { tab: "review", queue: null, reports: null, archive: null } };
+const S = { ready: false, db: null, user: null, articles: [], edited: [], directRaw: [], likes: {}, comments: [], img: null, pics: {}, leadId: "", all: [], pulled: [], editingId: null, loadError: "", handles: {}, avatars: {}, replyTo: null, writers: {}, requests: {}, mine: [], saved: [], me: { id: null, canEdit: false, canWrite: null }, route: { view: "home" }, desk: { tab: "review", queue: null, reports: null, archive: null } };
 const main = document.getElementById("main");
 
 function h(tag, attrs, ...kids) {
@@ -262,7 +290,7 @@ function viewHome() {
   if (!S.ready) return [emptyState(S.loadError ? "XS could not load its pieces. Check your connection and reload the page. (" + S.loadError + ")" : "Loading the latest pieces.")];
   if (!S.articles.length) return [h("div", { class: "pagehead" }, h("h1", null, "Nothing published yet"), h("p", null, "Published pieces appear here, newest first, with one column for each of the four sections. Invited writers submit from Write. The editor publishes from the Desk."))];
   const first = S.articles.find((a) => a.id === S.leadId) || S.articles[0]; const rest = S.articles.filter((a) => a !== first);
-  const out = [h("div", { class: "front" }, item(first, true), h("div", { class: "rail" }, rest.slice(0, 4).map((a) => item(a))))];
+  const out = [h("div", { class: "front" }, item(first, true), h("div", { class: "rail" }, conveyor(rest.slice(0, 12), "Latest")))];
   const cols = h("div", { class: "cols" });
   for (const k in SECTIONS) {
     const list = S.articles.filter((a) => a.section === k).slice(0, 3);
@@ -290,7 +318,7 @@ function viewArticle(id) {
   const a = S.articles.find((x) => x.id === id);
   if (!a) return [emptyState(S.ready ? "This piece is not published, or it was removed." : "Loading the piece.")];
   const saved = S.saved.includes(id);
-  const out = h("article", { class: "piece s-" + a.section }, metaRow(a, true), h("h1", null, a.title), a.dek && h("p", { class: "dek" }, a.dek), a.hasImage && figure(a), prose(a.body));
+  const out = h("article", { class: "piece s-" + a.section }, metaRow(a, true), h("h1", null, a.title), a.dek && h("p", { class: "dek" }, a.dek), bylineBlock(a), a.hasImage && figure(a), prose(a.body));
   if (a.disclosure) out.append(h("div", { class: "note" }, h("b", null, "Disclosure"), h("span", null, a.disclosure + (a.sebiReg ? " SEBI registration: " + a.sebiReg + "." : ""))));
   out.append(sourceList(a.sources) || "");
   for (const c of (a.corrections || [])) out.append(h("div", { class: "note" }, h("b", null, "Correction, " + when(c.at)), h("span", null, c.text)));
@@ -314,24 +342,6 @@ function viewArticle(id) {
     h("div", { class: "row" }, h("button", { class: "btn", type: "button", onclick: () => addCorrection(a) }, "Add correction"), h("button", { class: "btn quiet", type: "button", onclick: () => setLead(a.id === S.leadId ? "" : a.id) }, a.id === S.leadId ? "Stop leading with this" : "Make lead"), confirmBtn("Unpublish", "Confirm unpublish", () => unpublish(a)))));
   return [out];
 }
-function commentsBlock(a) {
-  const list = S.comments.filter((c) => c.articleId === a.id).sort((x, y) => (x.at || 0) - (y.at || 0));
-  const box = h("section", { class: "sheet" }, h("h3", null, list.length ? "Comments · " + list.length : "Comments"));
-  const spans = {};
-  for (const c of list) {
-    const pen = S.requests[c.by] && S.requests[c.by].penName;
-    const name = h("span", null, [pen, handleOf(c.by)].filter(Boolean).join(" ") || "Reader");
-    box.append(h("div", { class: "card" }, h("div", { class: "meta" }, name, h("span", null, when(c.at))), h("p", null, c.text),
-      h("div", { class: "row" }, (S.me.canEdit || c.by === S.me.id) && confirmBtn(c.by === S.me.id ? "Delete" : "Hide", "Confirm", () => hideComment(c)), flagControl(c.by))));
-  }
-  const ids = Object.keys(spans);
-    if (!list.length) box.append(h("p", { class: "meta" }, "No comments yet."));
-  if (S.db && S.me.id && S.me.canWrite !== false) box.append(
-    h("div", { class: "field" }, h("label", { for: "c-text" }, "Add a comment"), h("textarea", { id: "c-text", class: "short", maxlength: "1000" }), h("small", null, "Comments follow the house rules. The editor can hide any comment.")),
-    h("div", { class: "row" }, h("button", { class: "btn solid", type: "button", onclick: () => postComment(a) }, "Post comment")));
-  else box.append(h("p", { class: "meta" }, "Sign in to like, save, comment or report."));
-  return box;
-}
 function confirmBtn(label, confirmLabel, fn) {
   const b = h("button", { class: "btn quiet", type: "button" }, label); let armed = false;
   b.addEventListener("click", () => { if (!armed) { armed = true; b.textContent = confirmLabel; setTimeout(() => { armed = false; b.textContent = label; }, 10000); } else fn(); });
@@ -339,7 +349,7 @@ function confirmBtn(label, confirmLabel, fn) {
 }
 function viewAuthor(id) {
   const r = S.requests[id] || {}; const list = S.articles.filter((a) => a.authorId === id);
-  return [h("div", { class: "pagehead" }, h("span", { class: "meta" }, S.writers[id] ? "Invited writer" : "Writer"), h("h1", null, r.penName || "Writer"), handleOf(id) && h("p", { class: "meta" }, handleOf(id)), r.bio && h("p", null, r.bio), flagControl(id)),
+  return [h("div", { class: "pagehead" }, h("span", { class: "meta" }, S.writers[id] ? "Invited writer" : "Writer", r.verified && h("span", { class: "tag" }, "Verified by XS")), avatar(id, "xl"), h("h1", null, r.penName || "Writer"), handleOf(id) && h("p", { class: "meta" }, handleOf(id)), r.bio && h("p", null, r.bio), r.quals && h("p", null, h("b", null, "Qualifications: "), r.quals), r.education && h("p", null, h("b", null, "Education: "), r.education), (r.website || r.youtube || r.other) && h("p", { class: "links" }, [["Website", r.website], ["YouTube", r.youtube], ["More", r.other]].filter((x) => /^https:\/\//.test(x[1] || "")).map((x) => h("a", { href: x[1], target: "_blank", rel: "noopener nofollow" }, x[0]))), id === S.me.id && h("div", { class: "row" }, link("account", "Edit your profile", "btn quiet")), flagControl(id)),
     list.length ? h("div", { class: "list" }, list.map((a) => item(a))) : emptyState("No published pieces from this writer yet.")];
 }
 function viewSaved() {
@@ -459,14 +469,15 @@ function viewDesk() {
     const ids = Object.keys(S.requests);
     if (!ids.length) q.append(emptyState("No one has asked to write yet. A request appears here once a person signs in and fills in a byline."));
     for (const id of ids) { const r = S.requests[id]; const ok = !!S.writers[id];
-      if (r.role === "editor") { q.append(h("div", { class: "card" }, h("div", { class: "meta" }, h("span", { class: "tag" }, "Editor"), handleOf(id) && h("span", null, handleOf(id))), h("h3", null, link("w-" + id, r.penName || "Editor")), h("p", null, r.bio || ""))); continue; }
-      q.append(h("div", { class: "card" }, h("div", { class: "meta" }, h("span", { class: "tag" + (ok ? "" : " warn") }, ok ? "Invited" : "Waiting"), handleOf(id) && h("span", null, handleOf(id)), r.at && h("span", null, when(r.at))), h("h3", null, link("w-" + id, r.penName || "Writer")), h("p", null, r.bio || ""),
+      if (r.role === "editor") { q.append(h("div", { class: "card" }, h("div", { class: "meta" }, h("span", { class: "tag" }, "Editor"), r.verified && h("span", { class: "tag" }, "Verified"), handleOf(id) && h("span", null, handleOf(id))), h("h3", null, link("w-" + id, r.penName || "Editor")), h("p", null, r.bio || ""))); continue; }
+      q.append(h("div", { class: "card" }, h("div", { class: "meta" }, h("span", { class: "tag" + (ok ? "" : " warn") }, ok ? "Invited" : "Waiting"), r.verified && h("span", { class: "tag" }, "Verified"), handleOf(id) && h("span", null, handleOf(id)), r.at && h("span", null, when(r.at))), h("h3", null, link("w-" + id, r.penName || "Writer")), h("p", null, r.bio || ""), r.quals && h("p", { class: "meta" }, "Qualifications: " + r.quals),
         ok && h("p", { class: "meta" }, editedCount(id) + " editor-published. Direct publishing in Tech and Culture & Lifestyle: " + (S.writers[id].direct === false ? "paused" : editedCount(id) >= 3 ? "on" : "after 3")),
-        h("div", { class: "row" }, ok && h("button", { class: "btn quiet", type: "button", onclick: () => setDirect(id, S.writers[id].direct === false) }, S.writers[id].direct === false ? "Allow direct publishing" : "Pause direct publishing"), ok ? confirmBtn("Withdraw invitation", "Confirm withdrawal", () => setWriter(id, false)) : h("button", { class: "btn solid", type: "button", onclick: () => setWriter(id, true) }, "Approve"))));
+        h("div", { class: "row" }, h("button", { class: "btn quiet", type: "button", onclick: () => setVerified(id, !r.verified) }, r.verified ? "Remove verified mark" : "Mark as verified"), ok && h("button", { class: "btn quiet", type: "button", onclick: () => setDirect(id, S.writers[id].direct === false) }, S.writers[id].direct === false ? "Allow direct publishing" : "Pause direct publishing"), ok ? confirmBtn("Withdraw invitation", "Confirm withdrawal", () => setWriter(id, false)) : h("button", { class: "btn solid", type: "button", onclick: () => setWriter(id, true) }, "Approve"))));
     }
   } else if (S.desk.tab === "names") {
     deskUsernames(q);
   } else {
+    deskCommentReports(q);
     if (!S.desk.reports) q.append(emptyState("Loading reports."));
     else if (!S.desk.reports.length) q.append(emptyState("No reports. A reader's report on a piece appears here with the reason and the date."));
     else for (const r of S.desk.reports) q.append(h("div", { class: "card" }, h("div", { class: "meta" }, h("span", { class: "tag warn" }, r.reason), h("span", null, when(r.at))), h("h3", null, link("a-" + r.articleId, r.title || "Piece")), h("p", null, r.note || ""), h("div", { class: "row" }, h("button", { class: "btn quiet", type: "button", onclick: () => closeReport(r) }, "Mark handled"))));
@@ -518,10 +529,11 @@ function norm(p, corr) {
 }
 async function load() {
   const sb = S.db;
-  const sess = await sb.auth.getSession(); const uid = sess.data && sess.data.session ? sess.data.session.user.id : null;
+  const sess = await sb.auth.getSession(); const uid = sess.data && sess.data.session ? sess.data.session.user.id : null; const email = (uid && sess.data.session.user.email) || "";
   const [pf, pc, co, cm, lk, st] = await Promise.all([
-    sb.from("profiles").select("id,pen_name,bio,role"), sb.from("pieces").select("*").limit(1000), sb.from("corrections").select("*").order("created_at"),
+    sb.from("profiles").select("id,username,pen_name,bio,role,qualifications,education,website,youtube,other_link,verified,avatar_path"), sb.from("pieces").select("*").limit(1000), sb.from("corrections").select("*").order("created_at"),
     sb.from("comments").select("*").order("created_at"), sb.from("likes").select("piece_id,user_id"), sb.from("settings").select("lead_piece_id").eq("id", 1).maybeSingle()]);
+
   if (pc.error || pf.error) { S.loadError = (pc.error || pf.error).message; return; }   // keep what is on screen; a later refresh retries
   S.loadError = "";
   // The public sees bylines only. Your own account and, for the editor, every account come through two guarded calls.
@@ -531,13 +543,13 @@ async function load() {
   if (myRole === "editor") { const every = await sb.rpc("desk_profiles"); for (const p of (every.data || [])) people[p.id] = Object.assign({}, people[p.id], p); }
   S.requests = {}; S.writers = {};
   for (const p of Object.values(people)) {
-    if (p.pen_name) S.requests[p.id] = { penName: p.pen_name, bio: p.bio || "", at: ts(p.created_at), role: p.role };
+    if (p.pen_name) S.requests[p.id] = { penName: p.pen_name, bio: p.bio || "", at: ts(p.created_at), role: p.role, quals: p.qualifications || "", education: p.education || "", website: p.website || "", youtube: p.youtube || "", other: p.other_link || "", verified: !!p.verified };
     if (p.role === "writer" || p.role === "editor") S.writers[p.id] = { direct: !p.direct_paused };
   }
   // Usernames are public: one list of account id and @name.
-  const un = await sb.rpc("usernames"); S.handles = {}; for (const u of (un.data || [])) if (u.username) S.handles[u.id] = u.username;
-  for (const p of Object.values(people)) if (p.username) S.handles[p.id] = p.username;
-  S.me = { id: uid, canEdit: myRole === "editor", canWrite: uid ? true : null, username: (uid && S.handles[uid]) || "", usernameChangedAt: (uid && people[uid] && ts(people[uid].username_changed_at)) || null, usernameRemoved: (uid && people[uid] && people[uid].username_removed) || "" };
+  const un = await sb.rpc("usernames"); S.handles = {}; S.avatars = {}; for (const u of (un.data || [])) if (u.username) { S.handles[u.id] = u.username; if (u.avatar_path) S.avatars[u.id] = u.avatar_path; }
+  for (const p of Object.values(people)) { if (p.username) S.handles[p.id] = p.username; if (p.avatar_path) S.avatars[p.id] = p.avatar_path; else if ("avatar_path" in p) delete S.avatars[p.id]; }
+  S.me = { id: uid, canEdit: myRole === "editor", canWrite: uid ? true : null, username: (uid && S.handles[uid]) || "", usernameChangedAt: (uid && people[uid] && ts(people[uid].username_changed_at)) || null, usernameRemoved: (uid && people[uid] && people[uid].username_removed) || "", email };
   const corr = {}; for (const c of (co.data || [])) (corr[c.piece_id] = corr[c.piece_id] || []).push({ at: ts(c.created_at), text: c.body });
   S.all = pc.data.map((p) => norm(p, corr));
   S.articles = S.all.filter((p) => p.raw === "published").sort((a, b) => (b.publishedAt || 0) - (a.publishedAt || 0));
@@ -547,13 +559,15 @@ async function load() {
   S.desk.queue = S.all.filter((p) => p.raw === "submitted").sort((a, b) => (a.submittedAt || 0) - (b.submittedAt || 0));
   S.desk.archive = S.all.filter((p) => p.raw === "unpublished_by_editor").sort((a, b) => (b.unpublishedAt || 0) - (a.unpublishedAt || 0));
   S.likes = {}; for (const l of (lk.data || [])) { (S.likes[l.user_id] = S.likes[l.user_id] || { ids: {} }).ids[l.piece_id] = true; }
-  S.comments = (cm.data || []).filter((c) => !c.hidden).map((c) => ({ id: c.id, by: c.author_id, articleId: c.piece_id, text: c.body, at: ts(c.created_at) }));
+  S.comments = (cm.data || []).filter((c) => !c.hidden).map((c) => ({ id: c.id, by: c.author_id, articleId: c.piece_id, text: c.body, at: ts(c.created_at), parent: c.parent_id || null, thread: c.parent_id || c.id }));
   S.leadId = (st.data && st.data.lead_piece_id) || "";
   S.saved = []; S.desk.reports = [];
   if (uid) { const sv = await sb.from("saves").select("piece_id"); S.saved = (sv.data || []).map((r) => r.piece_id); }
   if (S.me.canEdit) { const rp = await sb.from("reports").select("*").eq("handled", false).order("created_at", { ascending: false });
     const [fl, rs, bw] = await Promise.all([sb.from("username_flags").select("*").eq("handled", false).order("created_at"), sb.from("reserved_usernames").select("*").order("username"), sb.from("banned_words").select("*").order("word")]);
     S.desk.flags = fl.data || []; S.desk.reserved = rs.data || []; S.desk.banned = bw.data || [];
+    const cr = await sb.from("comment_reports").select("*").eq("handled", false).order("created_at");
+    S.desk.creports = (cr.data || []).map((r) => { const c = (cm.data || []).find((x) => x.id === r.comment_id); return { id: r.id, reason: r.reason, at: ts(r.created_at), by: r.reporter_id, c: c ? { id: c.id, by: c.author_id, text: c.body, articleId: c.piece_id, hidden: c.hidden } : null }; });
     const hi = await sb.from("username_history").select("*").order("created_at", { ascending: false }).limit(2000); S.desk.history = hi.data || [];
     S.desk.roles = {}; for (const p of Object.values(people)) S.desk.roles[p.id] = p.role;
     S.desk.reports = (rp.data || []).map((r) => { const p = S.all.find((x) => x.id === r.piece_id); return { id: r.id, articleId: r.piece_id, title: p ? p.title : "Piece", reason: r.reason, note: r.note, at: ts(r.created_at) }; }); }
@@ -575,7 +589,7 @@ const USERNAME_TERMS = "A username must not pose as another person, a company, a
 const day = (t) => new Date(t).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" });
 function viewAccount() {
   const first = !S.me.username;
-  const head = h("div", { class: "pagehead" }, h("h1", null, first ? "Choose your username" : "Your account"),
+  const head = h("div", { class: "pagehead" }, h("h1", null, first ? "Choose your username" : "Your profile"),
     h("p", null, first ? "Everyone on XS has one username. It appears as @name next to your comments, and on your writer page if you write for XS. Choose it before you continue." : "Your username appears as @name next to your comments, and on your writer page if you write for XS."));
   if (!S.ready) return [head, emptyState("Checking your account.")];
   if (!S.me.id) return [head, h("p", { class: "alert" }, "Sign in first."), h("div", { class: "row" }, link("signin", "Sign in", "btn solid"))];
@@ -588,9 +602,151 @@ function viewAccount() {
       h("small", null, "3 to 20 characters: letters, digits and underscore, starting with a letter. Capital letters become small letters.")),
     h("p", { class: "err", id: "u-err", hidden: true }),
     h("div", { class: "row" }, h("button", { class: "btn solid", type: "submit", id: "u-go" }, first ? "Save username" : "Change username"))));
+  if (!first) out.push(pictureForm(), ...profileForm(), h("section", { class: "sheet" }, h("h3", null, "Settings"), S.me.email && h("p", { class: "meta" }, "Signed in as " + S.me.email + ". Your email is never shown on XS."), h("div", { class: "row" }, h("button", { class: "btn quiet", type: "button", onclick: signOut }, "Sign out"))));
   out.push(h("div", { class: "note" }, h("b", null, "Username rules"), h("span", null, "You can change your username once every 15 days. A change is final: you cannot go back to your old username, nobody can take it for 15 days, and after that it is open to anyone. " + USERNAME_TERMS)));
   return out;
 }
+const LINK = /^https:\/\/\S{4,200}$/;
+const UBUCKET = "user-images";
+function userImg(path) { return path ? SUPA_URL + "/storage/v1/object/public/" + UBUCKET + "/" + path.split("/").map(encodeURIComponent).join("/") : ""; }
+function avatar(id, cls) {
+  const p = S.avatars[id]; const name = (S.requests[id] && S.requests[id].penName) || S.handles[id] || "?";
+  if (!p) return h("span", { class: "av " + (cls || ""), "aria-hidden": "true" }, name.slice(0, 1).toUpperCase());
+  const img = h("img", { class: "av " + (cls || ""), alt: "", loading: "lazy" }); img.src = userImg(p); return img;
+}
+// Shrinks a chosen photo in the browser before it is stored. square = crop to the middle, for profile pictures.
+function shrink(file, maxW, square) {
+  return new Promise((res, rej) => { const r = new FileReader(); r.onerror = () => rej(new Error("XS could not read that file."));
+    r.onload = () => { const im = new Image(); im.onerror = () => rej(new Error("XS could not read that file as an image."));
+      im.onload = () => { const side = Math.min(im.naturalWidth, im.naturalHeight); let w = Math.min(maxW, square ? side : im.naturalWidth), q = 0.82, out = "";
+        for (let i = 0; i < 10; i++) { const c = document.createElement("canvas"); const x = c.getContext("2d");
+          if (square) { c.width = c.height = w; x.drawImage(im, (im.naturalWidth - side) / 2, (im.naturalHeight - side) / 2, side, side, 0, 0, w, w); }
+          else { c.width = w; c.height = Math.max(1, Math.round(im.naturalHeight * w / im.naturalWidth)); x.drawImage(im, 0, 0, c.width, c.height); }
+          out = c.toDataURL("image/jpeg", q); if (out.length <= 550000) break; if (q > 0.5) q -= 0.1; else w = Math.round(w * 0.8); }
+        if (out.length > 550000) rej(new Error("That image is too detailed to store. Try a smaller one.")); else res(out); };
+      im.src = r.result; };
+    r.readAsDataURL(file); });
+}
+async function putUserImage(dataUrl, prefix) {
+  const blob = await (await fetch(dataUrl)).blob();
+  const path = S.me.id + "/" + prefix + "-" + (crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(36) + Math.random().toString(36).slice(2)) + ".jpg";
+  const { error } = await S.db.storage.from(UBUCKET).upload(path, blob, { contentType: "image/jpeg", upsert: false });
+  if (error) throw error; return path;
+}
+async function pickAvatar(ev) {
+  const f = ev.target.files && ev.target.files[0]; if (!f) return;
+  try { const path = await putUserImage(await shrink(f, 320, true), "avatar"); const old = S.avatars[S.me.id];
+    if (!(await run(S.db.from("profiles").update({ avatar_path: path }).eq("id", S.me.id)))) return;
+    if (old) await S.db.storage.from(UBUCKET).remove([old]).catch(() => {});
+    await load(); toast("Profile picture updated"); render(true);
+  } catch (e) { fail(e); }
+}
+async function removeAvatar(id) {
+  const old = S.avatars[id]; if (!(await run(S.db.from("profiles").update({ avatar_path: null }).eq("id", id)))) return;
+  if (old) await S.db.storage.from(UBUCKET).remove([old]).catch(() => {});
+  await load(); toast("Profile picture removed"); render(true);
+}
+function pictureForm() {
+  const has = !!S.avatars[S.me.id];
+  return h("section", { class: "sheet" }, h("h3", null, "Profile picture"),
+    h("div", { class: "byl" }, avatar(S.me.id, "xl"), h("div", { class: "field" }, h("label", { for: "av-file" }, has ? "Change your picture" : "Add a picture"), h("input", { type: "file", id: "av-file", accept: "image/jpeg,image/png,image/webp", onchange: pickAvatar }),
+      h("small", null, "Shown on your profile, beside your comments, and beside your byline on your pieces. It is cropped to a square. Use a picture you have the right to use; do not use another person's photo or a logo that is not yours. The editor can remove a picture that breaks the house rules."))),
+    has && h("div", { class: "row" }, confirmBtn("Remove picture", "Confirm", () => removeAvatar(S.me.id))));
+}
+// Comment text: plain words, with https links made clickable. A link to an XS piece shows that piece's headline.
+function richText(text) {
+  const out = []; const here = location.origin + location.pathname;
+  (text || "").split(/(https:\/\/[^\s<>"']+)/g).forEach((part, i) => {
+    if (!(i % 2)) { if (part) out.push(part); return; }
+    const url = part.replace(/[.,;:!?)\]]+$/, ""); const rest = part.slice(url.length);
+    const m = (url.startsWith(here) || url.startsWith(SITE_URL)) && /#a-([0-9a-zA-Z-]+)$/.exec(url); const art = m && S.articles.find((x) => x.id === m[1]);
+    out.push(art ? link("a-" + art.id, art.title) : h("a", { href: url, target: "_blank", rel: "noopener nofollow ugc" }, url.length > 60 ? url.slice(0, 57) + "…" : url));
+    if (rest) out.push(rest);
+  });
+  return out;
+}
+function canComment() { return !!(S.db && S.me.id && S.me.username); }
+function reportCommentControl(c) {
+  const wrap = h("span", { class: "row" }); const open = h("button", { class: "btn quiet", type: "button" }, "Report");
+  open.addEventListener("click", () => { const sel = h("select", { "aria-label": "Why are you reporting this comment" }, ["Abusive or hateful", "False or defamatory", "Obscene", "Spam or advertising", "Privacy", "Other"].map((r) => h("option", null, r)));
+    wrap.replaceChildren(sel, h("button", { class: "btn", type: "button", onclick: async () => { const { error } = await S.db.from("comment_reports").insert({ comment_id: c.id, reporter_id: S.me.id, reason: sel.value });
+      if (error && error.code !== "23505") return fail(error); wrap.replaceChildren(h("span", { class: "meta" }, error ? "You have already reported this comment" : "Report sent to the editor")); } }, "Send report")); });
+  wrap.append(open); return wrap;
+}
+function commentForm(a, parentId) {
+  const key = parentId ? "r" : "c";
+  return h("div", { class: "cform" + (parentId ? " reply" : "") },
+    h("div", { class: "field" }, h("label", { for: key + "-text" }, parentId ? "Your reply" : "Add a comment"), h("textarea", { id: key + "-text", class: "short", maxlength: "1000" }),
+      h("small", null, "Paste a full https:// link to share a website or another XS piece. Comments follow the house rules. The editor can hide any comment.")),
+    h("div", { class: "row" }, h("button", { class: "btn solid", type: "button", id: key + "-go", onclick: () => postComment(a, parentId) }, parentId ? "Post reply" : "Post comment"), parentId && h("button", { class: "btn quiet", type: "button", onclick: () => { S.replyTo = null; render(true); } }, "Cancel")));
+}
+function commentCard(a, c) {
+  const pen = S.requests[c.by] && S.requests[c.by].penName; const mine = c.by === S.me.id;
+  return h("div", { class: "comment" + (c.parent ? " reply" : "") }, avatar(c.by),
+    h("div", { class: "cbody" }, h("div", { class: "meta" }, h("span", null, [pen, handleOf(c.by)].filter(Boolean).join(" ") || "Reader"), h("span", null, when(c.at))),
+      h("p", { class: "ctext" }, richText(c.text)),
+      h("div", { class: "row" }, canComment() && h("button", { class: "btn quiet", type: "button", onclick: () => { S.replyTo = S.replyTo === c.thread ? null : c.thread; render(true); } }, "Reply"),
+        (S.me.canEdit || mine) && confirmBtn(mine ? "Delete" : "Hide", "Confirm", () => hideComment(c)), !mine && canComment() && reportCommentControl(c), flagControl(c.by))));
+}
+function commentsBlock(a) {
+  const list = S.comments.filter((c) => c.articleId === a.id).sort((x, y) => (x.at || 0) - (y.at || 0));
+  const tops = list.filter((c) => !c.parent || !list.some((p) => p.id === c.parent));
+  const box = h("section", { class: "sheet" }, h("h3", null, list.length ? "Comments · " + list.length : "Comments"));
+  for (const t of tops) { box.append(commentCard(a, Object.assign({}, t, { parent: null, thread: t.id })));
+    for (const r of list.filter((c) => c.parent === t.id)) box.append(commentCard(a, r));
+    if (S.replyTo === t.id && canComment()) box.append(commentForm(a, t.id)); }
+  if (!list.length) box.append(h("p", { class: "meta" }, "No comments yet."));
+  if (canComment()) box.append(commentForm(a, null));
+  else box.append(h("p", { class: "meta" }, "Sign in to like, save, comment or report."));
+  return box;
+}
+function bylineBlock(a) {
+  const id = a.authorId; if (!id || a.sample) return null; const r = S.requests[id] || {};
+  return h("div", { class: "byl" }, avatar(id, "lg"), h("div", null, link("w-" + id, byline(a)), h("div", { class: "meta" }, handleOf(id) && h("span", null, handleOf(id)), r.verified && h("span", { class: "tag" }, "Verified by XS"))));
+}
+function conveyor(list, title) {
+  if (!list.length) return null; const moving = list.length >= 4; const secs = list.length * 6;
+  const row = (a, dup) => h("li", { class: "s-" + a.section, "aria-hidden": dup ? "true" : null }, h("span", { class: "meta" }, h("span", { class: "sec" }, SECTIONS[a.section] ? SECTIONS[a.section].name : ""), h("span", null, when(a.publishedAt))),
+    h("a", { href: "#a-" + a.id, "data-go": "a-" + a.id, class: "ch", tabindex: dup ? "-1" : null }, a.title), a.dek && h("span", { class: "cd" }, a.dek));
+  // The list is laid out twice and slides up by half its height, so it loops without a jump. The clock keeps its place across page refreshes.
+  const ol = h("ol", { class: moving ? "belt" : null, style: moving ? "animation-duration:" + secs + "s;animation-delay:-" + ((Date.now() / 1000) % secs).toFixed(2) + "s" : null }, list.map((a) => row(a)), moving && list.map((a) => row(a, true)));
+  return h("aside", { class: "conveyor", "aria-label": title }, h("h2", null, title), h("div", { class: "window" + (moving ? " moving" : "") }, ol));
+}
+function deskCommentReports(q) {
+  const list = S.desk.creports || []; if (!list.length) return;
+  q.append(h("h3", null, "Reported comments · " + list.length));
+  for (const r of list) { const c = r.c;
+    q.append(h("div", { class: "card" }, h("div", { class: "meta" }, h("span", { class: "tag warn" }, r.reason), h("span", null, when(r.at)), r.by && handleOf(r.by) && h("span", null, "Reported by " + handleOf(r.by))),
+      c ? h("p", { class: "ctext" }, (handleOf(c.by) || "Reader") + ": " + c.text) : h("p", { class: "meta" }, "The comment no longer exists."), c && c.hidden && h("p", { class: "meta" }, "Already hidden."),
+      h("div", { class: "row" }, c && link("a-" + c.articleId, "Open the piece", "btn quiet"), c && !c.hidden && confirmBtn("Hide comment", "Confirm", async () => { await hideComment(c); await closeCommentReport(r); }), h("button", { class: "btn quiet", type: "button", onclick: () => closeCommentReport(r) }, "Mark handled")))); }
+  q.append(h("h3", null, "Reported pieces"));
+}
+async function closeCommentReport(r) { await act(S.db.from("comment_reports").update({ handled: true }).eq("id", r.id), "Marked handled"); }
+function profileForm() {
+  const mine = S.requests[S.me.id];
+  if (!mine && !isWriter()) return [h("section", { class: "sheet" }, h("h3", null, "Writer profile"), h("p", { class: "meta" }, "A byline, bio and links are for people who write for XS. To ask for an invitation, open Write."), h("div", { class: "row" }, link("write", "Write for XS", "btn"))) ];
+  const m = mine || {}; const f = (id, label, value, max, hint, area) => h("div", { class: "field" }, h("label", { for: id }, label), area ? h("textarea", { id, class: "short", maxlength: String(max) }, value || "") : h("input", { type: "text", id, maxlength: String(max), value: value || "" }), hint && h("small", null, hint));
+  return [h("form", { class: "sheet", onsubmit: saveProfile }, h("h3", null, "Writer profile"),
+    h("p", { class: "meta" }, "Shown on your writer page", S.writers[S.me.id] ? ". " : " once the editor has invited you. ", m.verified ? h("span", { class: "tag" }, "Verified by XS") : "The editor can mark a profile as verified after checking who you are."),
+    f("p-name", "Byline", m.penName, 40, "The name printed on your pieces. 2 to 40 characters."),
+    f("p-bio", "About you", m.bio, 400, "What you write about and your background. Up to 400 characters.", true),
+    f("p-quals", "Qualifications and registrations", m.quals, 300, "For example a professional qualification, or a SEBI registration number if you hold one. Leave empty if none. Do not claim a qualification you do not hold.", true),
+    f("p-edu", "Education", m.education, 200, "Optional."),
+    f("p-web", "Website", m.website, 200, "Optional. A full link starting with https://"),
+    f("p-yt", "YouTube", m.youtube, 200, "Optional. A full link starting with https://"),
+    f("p-other", "One other link", m.other, 200, "Optional. For example LinkedIn or X. A full link starting with https://"),
+    h("p", { class: "err", id: "p-err", hidden: true }),
+    h("div", { class: "row" }, h("button", { class: "btn solid", type: "submit", id: "p-go" }, "Save profile")))];
+}
+async function saveProfile(ev) {
+  ev.preventDefault(); const err = document.getElementById("p-err"); const show = (m) => { err.hidden = !m; err.textContent = m; };
+  const row = { pen_name: val("p-name"), bio: val("p-bio"), qualifications: val("p-quals") || null, education: val("p-edu") || null, website: val("p-web") || null, youtube: val("p-yt") || null, other_link: val("p-other") || null };
+  if (row.pen_name.length < 2) return show("Enter a byline of at least 2 characters.");
+  for (const k of ["website", "youtube", "other_link"]) if (row[k] && !LINK.test(row[k])) return show("Each link must be a full address starting with https:// and without spaces.");
+  show(""); await act(S.db.from("profiles").update(row).eq("id", S.me.id), "Profile saved");
+}
+async function setVerified(id, on) { await act(S.db.from("profiles").update({ verified: on }).eq("id", id), on ? "Marked as verified" : "Verified mark removed"); }
+function stamp(ms) { try { const d = new Date(ms); const day = new Intl.DateTimeFormat("en-IN", { day: "numeric", month: "short", timeZone: "Asia/Kolkata" }); const time = new Intl.DateTimeFormat("en-IN", { hour: "numeric", minute: "2-digit", timeZone: "Asia/Kolkata" }).format(d); return day.format(d) === day.format(new Date()) ? time : day.format(d) + ", " + time; } catch (e) { return ""; } }
 async function saveUsername(ev) {
   ev.preventDefault(); const name = cleanHandle(val("u-name")); const err = document.getElementById("u-err"); const btn = document.getElementById("u-go");
   const show = (m) => { err.hidden = !m; err.textContent = m; };
@@ -640,7 +796,7 @@ function deskUsernames(q) {
   const rows = h("div", { class: "queue" });
   const draw = () => { const t = cleanHandle(find.value); rows.replaceChildren(...ids.filter((id) => !t || S.handles[id].includes(t) || id.toLowerCase().startsWith(t) || (hist[id] || []).some((r) => (r.old_username || "").includes(t))).slice(0, 200).map((id) =>
     h("div", { class: "card" }, h("div", { class: "meta" }, h("span", { class: "tag" }, ({ editor: "Editor", writer: "Writer" })[S.desk.roles && S.desk.roles[id]] || "Reader"), S.requests[id] && h("span", null, S.requests[id].penName)),
-      h("h3", null, "@" + S.handles[id]), trail(id), id !== S.me.id && h("div", { class: "row" }, confirmBtn("Remove username", "Confirm removal", () => removeUsername(id)))))); };
+      h("div", { class: "byl" }, avatar(id), h("h3", null, "@" + S.handles[id])), trail(id), id !== S.me.id && h("div", { class: "row" }, confirmBtn("Remove username", "Confirm removal", () => removeUsername(id)), S.avatars[id] && confirmBtn("Remove picture", "Confirm", () => removeAvatar(id)))))); };
   find.addEventListener("input", draw); draw();
   q.append(h("div", { class: "field" }, find), rows);
   const log = (S.desk.history || []).slice(0, 100);
@@ -704,9 +860,16 @@ async function toggleLike(id) {
   if (iLike(id)) await act(S.db.from("likes").delete().eq("piece_id", id).eq("user_id", S.me.id));
   else await act(S.db.from("likes").insert({ piece_id: id, user_id: S.me.id }));
 }
-async function postComment(a) {
-  const text = val("c-text"); if (text.length < 2) return toast("Write your comment first.");
-  await act(S.db.from("comments").insert({ piece_id: a.id, author_id: S.me.id, body: text.slice(0, 1000) }), "Comment posted");
+async function postComment(a, parentId) {
+  const key = parentId ? "r" : "c"; const text = val(key + "-text"); if (text.length < 2) return toast("Write your comment first.");
+  const btn = document.getElementById(key + "-go"); if (btn) btn.disabled = true;
+  try {
+    const row = { piece_id: a.id, author_id: S.me.id, body: text.slice(0, 1000) };
+    if (parentId) row.parent_id = parentId;
+    const { error } = await S.db.from("comments").insert(row); if (error) throw error;
+    if (parentId) S.replyTo = null;
+    await load(); toast(parentId ? "Reply posted" : "Comment posted"); render(true);
+  } catch (e) { if (btn) btn.disabled = false; fail(e); }
 }
 async function hideComment(c) { await act(S.db.from("comments").update({ hidden: true }).eq("id", c.id), c.by === S.me.id ? "Comment deleted" : "Comment hidden"); }
 async function addCorrection(a) {
