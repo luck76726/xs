@@ -206,6 +206,8 @@ function link(token, text, cls) { return h("a", { href: "#" + token, "data-go": 
 function toast(msg) { const t = document.getElementById("toast"); t.textContent = msg; t.hidden = false; clearTimeout(toast.t); toast.t = setTimeout(() => { t.hidden = true; }, 3200); }
 function when(ms) { try { return new Intl.DateTimeFormat("en-IN", { day: "numeric", month: "short", year: "numeric", timeZone: "Asia/Kolkata" }).format(new Date(ms)); } catch (e) { return ""; } }
 function minutes(body) { return Math.max(1, Math.round(String(body || "").trim().split(/\s+/).length / 220)); }
+// Date and time of publication, always in Indian Standard Time.
+function whenTime(ms, zone) { try { return new Intl.DateTimeFormat("en-IN", { day: "numeric", month: "short", year: "numeric", hour: "numeric", minute: "2-digit", hour12: true, timeZone: "Asia/Kolkata" }).format(new Date(ms)) + (zone ? " IST" : ""); } catch (e) { return ""; } }
 function isWriter() { return S.me.canEdit || !!(S.me.id && S.writers[S.me.id]); }
 function editedCount(uid) { return S.edited.filter((a) => a.authorId === uid && !a.sample).length; }
 function canDirect(uid, section) { const w = S.writers[uid]; return !!uid && DIRECT.includes(section) && !!w && w.direct !== false && editedCount(uid) >= 3; }
@@ -262,7 +264,7 @@ function chrome() {
   if (S.ready) tools.append(S.me.id ? h("button", { class: "btn quiet", type: "button", onclick: signOut }, "Sign out") : link("signin", "Sign in", "btn quiet"));
 }
 
-function metaRow(a, withSec) {
+function metaRow(a, withSec, zone) {
   return h("div", { class: "meta" },
     withSec && link(a.section, SECTIONS[a.section] ? SECTIONS[a.section].name : a.section, "sec"),
     h("span", { class: "tag" }, a.label || "Analysis"),
@@ -270,7 +272,7 @@ function metaRow(a, withSec) {
     a.sample && h("span", { class: "tag warn" }, "Sample"),
     a.direct && S.me.canEdit && h("span", { class: "tag" }, "Direct"),
     h("span", null, a.authorId ? link("w-" + a.authorId, byline(a)) : byline(a)),
-    a.publishedAt && h("span", null, when(a.publishedAt)),
+    a.publishedAt && h("span", null, whenTime(a.publishedAt, zone)),
     h("span", null, minutes(a.body) + " min read"));
 }
 function item(a, big, withSec) {
@@ -318,7 +320,7 @@ function viewArticle(id) {
   const a = S.articles.find((x) => x.id === id);
   if (!a) return [emptyState(S.ready ? "This piece is not published, or it was removed." : "Loading the piece.")];
   const saved = S.saved.includes(id);
-  const out = h("article", { class: "piece s-" + a.section }, metaRow(a, true), h("h1", null, a.title), a.dek && h("p", { class: "dek" }, a.dek), bylineBlock(a), a.hasImage && figure(a), prose(a.body));
+  const out = h("article", { class: "piece s-" + a.section }, metaRow(a, true, true), h("h1", null, a.title), a.dek && h("p", { class: "dek" }, a.dek), bylineBlock(a), a.hasImage && figure(a), prose(a.body));
   if (a.disclosure) out.append(h("div", { class: "note" }, h("b", null, "Disclosure"), h("span", null, a.disclosure + (a.sebiReg ? " SEBI registration: " + a.sebiReg + "." : ""))));
   out.append(sourceList(a.sources) || "");
   for (const c of (a.corrections || [])) out.append(h("div", { class: "note" }, h("b", null, "Correction, " + when(c.at)), h("span", null, c.text)));
@@ -706,7 +708,7 @@ function bylineBlock(a) {
 }
 function conveyor(list, title) {
   if (!list.length) return null; const moving = list.length >= 4; const secs = list.length * 6;
-  const row = (a, dup) => h("li", { class: "s-" + a.section, "aria-hidden": dup ? "true" : null }, h("span", { class: "meta" }, h("span", { class: "sec" }, SECTIONS[a.section] ? SECTIONS[a.section].name : ""), h("span", null, when(a.publishedAt))),
+  const row = (a, dup) => h("li", { class: "s-" + a.section, "aria-hidden": dup ? "true" : null }, h("span", { class: "meta" }, h("span", { class: "sec" }, SECTIONS[a.section] ? SECTIONS[a.section].name : ""), h("span", null, whenTime(a.publishedAt))),
     h("a", { href: "#a-" + a.id, "data-go": "a-" + a.id, class: "ch", tabindex: dup ? "-1" : null }, a.title), a.dek && h("span", { class: "cd" }, a.dek));
   // The list is laid out twice and slides up by half its height, so it loops without a jump. The clock keeps its place across page refreshes.
   const ol = h("ol", { class: moving ? "belt" : null, style: moving ? "animation-duration:" + secs + "s;animation-delay:-" + ((Date.now() / 1000) % secs).toFixed(2) + "s" : null }, list.map((a) => row(a)), moving && list.map((a) => row(a, true)));
