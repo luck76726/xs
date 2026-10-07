@@ -70,7 +70,7 @@ h1, h2, h3 { text-wrap: balance; margin: 0; line-height: 1.12; letter-spacing: -
 .item h3 { font-size: 20px; font-weight: 600 }
 .item .dek { font-size: 16px }
 .conveyor { border: 2px solid var(--ink); padding: 16px; display: grid; gap: 4px; align-content: start }
-.conveyor h2 { font-family: var(--mono); font-size: 12px; text-transform: uppercase; letter-spacing: .08em; font-weight: 500 }
+.conveyor h2 { font-family: var(--mono); font-size: 12px; text-transform: uppercase; letter-spacing: .08em; font-weight: 500; padding-bottom: 10px; border-bottom: 1px solid var(--line) }
 .conveyor .window { overflow: hidden }
 .conveyor .window.moving { height: 400px }
 .conveyor ol { list-style: none; margin: 0; padding: 0 }
@@ -302,7 +302,7 @@ function viewHome() {
 function viewSection(k) {
   const list = S.articles.filter((a) => a.section === k);
   return [h("div", { class: "pagehead s-" + k }, h("span", { class: "meta" }, h("span", { class: "sec" }, "Section")), h("h1", null, SECTIONS[k].name), h("p", null, SECTIONS[k].line)),
-    list.length ? h("div", { class: "list" }, list.map((a) => item(a, false, false))) : emptyState("No " + SECTIONS[k].name + " pieces published yet.")];
+    list.length ? h("div", { class: "front s-" + k }, h("div", { class: "list" }, list.map((a) => item(a, false, false))), h("div", { class: "rail" }, conveyor(list.slice(0, 12), "Latest in " + SECTIONS[k].name))) : emptyState("No " + SECTIONS[k].name + " pieces published yet.")];
 }
 function prose(body) {
   const box = h("div", { class: "prose" });
@@ -710,7 +710,10 @@ function conveyor(list, title) {
     h("a", { href: "#a-" + a.id, "data-go": "a-" + a.id, class: "ch", tabindex: dup ? "-1" : null }, a.title), a.dek && h("span", { class: "cd" }, a.dek));
   // The list is laid out twice and slides up by half its height, so it loops without a jump. The clock keeps its place across page refreshes.
   const ol = h("ol", { class: moving ? "belt" : null, style: moving ? "animation-duration:" + secs + "s;animation-delay:-" + ((Date.now() / 1000) % secs).toFixed(2) + "s" : null }, list.map((a) => row(a)), moving && list.map((a) => row(a, true)));
-  return h("aside", { class: "conveyor", "aria-label": title }, h("h2", null, title), h("div", { class: "window" + (moving ? " moving" : "") }, ol));
+  const win = h("div", { class: "window" + (moving ? " moving" : "") }, ol);
+  // The window is sized to show three pieces at a time.
+  if (moving) requestAnimationFrame(() => { const li = ol.children; if (li.length > 3 && li[3].offsetTop > li[0].offsetTop) win.style.height = (li[3].offsetTop - li[0].offsetTop) + "px"; });
+  return h("aside", { class: "conveyor", "aria-label": title }, h("h2", null, title), win);
 }
 function deskCommentReports(q) {
   const list = S.desk.creports || []; if (!list.length) return;
