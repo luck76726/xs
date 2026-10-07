@@ -229,7 +229,8 @@ function chrome() {
   if (S.me.id) tools.append(link("saved", "Saved", "btn quiet"));
   if (S.me.canEdit) tools.append(link("desk", "Desk", "btn quiet"));
   tools.append(link("write", "Write", "btn solid"));
-  tools.append(S.me.id ? h("button", { class: "btn quiet", type: "button", onclick: signOut }, "Sign out") : link("signin", "Sign in", "btn quiet"));
+  // Until the first check finishes, XS does not yet know whether you are signed in, so it shows neither button.
+  if (S.ready) tools.append(S.me.id ? h("button", { class: "btn quiet", type: "button", onclick: signOut }, "Sign out") : link("signin", "Sign in", "btn quiet"));
 }
 
 function metaRow(a, withSec) {
@@ -484,6 +485,7 @@ function imageUrl(path) { return path ? SUPA_URL + "/storage/v1/object/public/" 
 
 function viewSignin() {
   const head = h("div", { class: "pagehead" }, h("h1", null, "Sign in"), h("p", null, "Enter your email and XS sends you a sign-in link. No password. Readers sign in to like, save, comment and report. Writers sign in to write."));
+  if (!S.ready) return [head, emptyState(S.loadError ? "XS could not check your sign-in. Reload the page. (" + S.loadError + ")" : "Checking whether you are already signed in.")];
   if (S.me.id) return [head, h("p", { class: "alert" }, "You are signed in."), h("div", { class: "row" }, link("home", "Go to the front page", "btn solid"))];
   return [head, h("form", { class: "sheet", onsubmit: sendLink },
     h("div", { class: "field" }, h("label", { for: "si-email" }, "Email"), h("input", { type: "text", id: "si-email", inputmode: "email", autocomplete: "email", maxlength: "200", required: true })),
@@ -513,13 +515,17 @@ async function load() {
   const sb = S.db;
   const sess = await sb.auth.getSession(); const uid = sess.data && sess.data.session ? sess.data.session.user.id : null;
   const [pf, pc, co, cm, lk, st] = await Promise.all([
-    sb.from("profiles").select("*"), sb.from("pieces").select("*").limit(1000), sb.from("corrections").select("*").order("created_at"),
+    sb.from("profiles").select("id,pen_name,bio,role"), sb.from("pieces").select("*").limit(1000), sb.from("corrections").select("*").order("created_at"),
     sb.from("comments").select("*").order("created_at"), sb.from("likes").select("piece_id,user_id"), sb.from("settings").select("lead_piece_id").eq("id", 1).maybeSingle()]);
-  if (pc.error || pf.error) { S.loadError = (pc.error || pf.error).message; S.ready = false; return; }
+  if (pc.error || pf.error) { S.loadError = (pc.error || pf.error).message; return; }   // keep what is on screen; a later refresh retries
   S.loadError = "";
-  S.requests = {}; S.writers = {}; let myRole = "reader";
-  for (const p of pf.data) {
-    if (p.id === uid) myRole = p.role;
+  // The public sees bylines only. Your own account and, for the editor, every account come through two guarded calls.
+  const people = {}; for (const p of pf.data) people[p.id] = p;
+  if (uid) { const mine = await sb.rpc("my_profile"); for (const p of (mine.data || [])) people[p.id] = Object.assign({}, people[p.id], p); }
+  const myRole = (uid && people[uid] && people[uid].role) || "reader";
+  if (myRole === "editor") { const every = await sb.rpc("desk_profiles"); for (const p of (every.data || [])) people[p.id] = Object.assign({}, people[p.id], p); }
+  S.requests = {}; S.writers = {};
+  for (const p of Object.values(people)) {
     if (p.pen_name) S.requests[p.id] = { penName: p.pen_name, bio: p.bio || "", at: ts(p.created_at), role: p.role };
     if (p.role === "writer" || p.role === "editor") S.writers[p.id] = { direct: !p.direct_paused };
   }
