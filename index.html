@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>XS</title>
-<meta name="description" content="XS: India-centric writing on Finance, Tech, Politics, and Culture and Lifestyle. Writers publish by invitation.">
+<title>FTPC</title>
+<meta name="description" content="FTPC: Finance, Tech, Politics, Culture & Lifestyle. Free and open writing on what is happening around you in India, with sources. Writers publish by invitation.">
 <meta name="color-scheme" content="light dark">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -96,6 +96,7 @@ h1, h2, h3 { text-wrap: balance; margin: 0; line-height: 1.12; letter-spacing: -
 .links { display: flex; gap: 14px; flex-wrap: wrap; font-size: 14px }
 .sheet + .sheet, .sheet + .note, .alert + .sheet, .card + .sheet { margin-top: 32px }
 @media (max-width: 560px) { .comment.reply, .cform.reply { margin-left: 20px } }
+.tabs a[aria-current="page"] { background: var(--ink); color: var(--bg) }
 .brief { display: grid; gap: 6px; padding: 14px 0; border-top: 1px solid var(--line) }
 .brief h3 { font-size: 18px; line-height: 1.25; font-weight: 700 }
 .brief h3 a { text-decoration: none }
@@ -158,7 +159,7 @@ footer { border-top: 1px solid var(--line); margin-top: 48px; padding-top: 16px;
 <body>
 <header class="bar">
   <div class="bar-in">
-    <a class="mark" href="#home" data-go="home" aria-label="XS front page">XS</a>
+    <a class="mark" href="#home" data-go="home" aria-label="FTPC front page">FTPC</a>
     <nav class="nav" id="nav" aria-label="Sections"></nav>
     <div class="tools" id="tools"></div>
   </div>
@@ -170,7 +171,7 @@ footer { border-top: 1px solid var(--line); margin-top: 48px; padding-top: 16px;
 const SUPA_URL = "https://bysumjjojjlzqafggnmy.supabase.co";
 const SUPA_KEY = "sb_publishable_pu4TtLaFkvOkKqLezaQ0cg_08Yvi36R";   // publishable key: safe to ship in the page
 const BUCKET = "piece-images";
-const SITE_URL = "https://luck76726.github.io/xs/";   // the public address of XS; change it when XS moves to its own domain
+const SITE_URL = "https://luck76726.github.io/xs-ftpc/";   // the public address of FTPC; change it when FTPC moves to its own domain
 const SECTIONS = {
   finance: { name: "Finance", line: "Markets, money and policy. News, analysis and education. No investment advice.",
     check: "This piece gives no buy, sell or hold call, no price target and no promised return.",
@@ -192,7 +193,7 @@ const DIRECT = ["tech", "culture"];
 const PIC = /^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+\/=]+$/;
 const ADVICE = /\b(target price|price target|stop[- ]?loss|multibagger|guaranteed returns?|assured returns?|buy (call|rating|now)|sell (call|rating)|strong buy|accumulate at)\b/i;
 
-const S = { ready: false, db: null, user: null, articles: [], edited: [], directRaw: [], likes: {}, comments: [], img: null, pics: {}, leadId: "", all: [], pulled: [], editingId: null, loadError: "", handles: {}, avatars: {}, replyTo: null, writers: {}, requests: {}, mine: [], saved: [], me: { id: null, canEdit: false, canWrite: null }, route: { view: "home" }, desk: { tab: "review", queue: null, reports: null, archive: null } };
+const S = { ready: false, db: null, user: null, articles: [], edited: [], directRaw: [], likes: {}, comments: [], img: null, pics: {}, leadId: "", all: [], pulled: [], editingId: null, loadError: "", handles: {}, avatars: {}, replyTo: null, pages: {}, writers: {}, requests: {}, mine: [], saved: [], me: { id: null, canEdit: false, canWrite: null }, route: { view: "home" }, desk: { tab: "review", queue: null, reports: null, archive: null } };
 const main = document.getElementById("main");
 
 function h(tag, attrs, ...kids) {
@@ -237,7 +238,7 @@ function pickImage(ev) {
       for (let i = 0; i < 10; i++) { const c = document.createElement("canvas"); c.width = w; c.height = Math.max(1, Math.round(im.naturalHeight * w / im.naturalWidth)); c.getContext("2d").drawImage(im, 0, 0, c.width, c.height); out = c.toDataURL("image/jpeg", q); if (out.length <= 550000) break; if (q > 0.5) q -= 0.1; else w = Math.round(w * 0.8); }
       if (out.length > 550000) { S.img = null; toast("That image is too detailed to store. Try a simpler or smaller one."); } else S.img = out;
       showPick(); };
-    im.onerror = () => toast("XS could not read that file as an image.");
+    im.onerror = () => toast("FTPC could not read that file as an image.");
     im.src = r.result; };
   r.readAsDataURL(f);
 }
@@ -245,14 +246,14 @@ function showPick() {
   const box = document.getElementById("w-img-prev"); if (!box) return; box.replaceChildren();
   if (S.img) box.append(h("figure", { class: "pic small" }, h("img", { src: S.img, alt: "Preview of the chosen image" })), h("div", { class: "row" }, h("button", { class: "btn quiet", type: "button", onclick: () => { S.img = null; const i = document.getElementById("w-img"); if (i) i.value = ""; showPick(); } }, "Remove image")));
 }
-function byline(a) { return (a.authorId && S.requests[a.authorId] && S.requests[a.authorId].penName) || a.penName || "XS"; }
+function byline(a) { return (a.authorId && S.requests[a.authorId] && S.requests[a.authorId].penName) || a.penName || "FTPC"; }
 
 function parse(token) {
   token = (token || "").replace(/^#/, "");
   if (SECTIONS[token]) return { view: "section", id: token };
   if (token.slice(0, 2) === "a-") return { view: "article", id: token.slice(2) };
   if (token.slice(0, 2) === "w-") return { view: "author", id: token.slice(2) };
-  if (["write", "desk", "saved", "rules", "signin", "account"].includes(token)) return { view: token };
+  if (["write", "desk", "saved", "rules", "signin", "account", "about", "about-future", "about-use", "about-next"].includes(token)) return { view: token };
   return { view: "home" };
 }
 function go(token) { S.route = parse(token); try { if (location.hash.replace(/^#/, "") !== token) location.hash = token; } catch (e) {} render(true); window.scrollTo(0, 0); }
@@ -262,11 +263,11 @@ window.addEventListener("hashchange", () => { const r = parse(location.hash); if
 function chrome() {
   const nav = document.getElementById("nav"); nav.replaceChildren();
   for (const k in SECTIONS) { const a = link(k, SECTIONS[k].name); if (S.route.view === "section" && S.route.id === k) a.setAttribute("aria-current", "page"); nav.append(a); }
-  const tools = document.getElementById("tools"); tools.replaceChildren(link("rules", "Rules", "btn quiet"));
+  const tools = document.getElementById("tools"); tools.replaceChildren(link("about", "About", "btn quiet"), link("rules", "Rules", "btn quiet"));
   if (S.me.id) tools.append(link("saved", "Saved", "btn quiet"));
   if (S.me.canEdit) tools.append(link("desk", "Desk", "btn quiet"));
   tools.append(link("write", "Write", "btn solid"));
-  // Until the first check finishes, XS does not yet know whether you are signed in, so it shows neither button.
+  // Until the first check finishes, FTPC does not yet know whether you are signed in, so it shows neither button.
   if (S.ready && S.me.id) tools.append(link("account", S.me.username ? "@" + S.me.username : "Account", "btn quiet"));
   if (S.ready) tools.append(S.me.id ? h("button", { class: "btn quiet", type: "button", onclick: signOut }, "Sign out") : link("signin", "Sign in", "btn quiet"));
 }
@@ -297,12 +298,12 @@ function brief(a) {
 function emptyState(text) { return h("p", { class: "empty" }, text); }
 function footer() {
   return h("footer", null,
-    h("span", null, "XS. India-centric Finance, Tech, Politics, Culture & Lifestyle. Writers publish by invitation."),
+    h("span", null, "FTPC: Finance, Tech, Politics, Culture & Lifestyle. Kept open by its enablers. Writers publish by invitation."), h("span", { class: "links" }, link("about", "About"), link("about-use", "Use and misuse"), link("about-next", "What\u2019s next"), link("rules", "House rules")),
     h("span", null, "Grievance officer: to be named before launch. To complain about a piece, use Report on that piece."));
 }
 
 function viewHome() {
-  if (!S.ready) return [emptyState(S.loadError ? "XS could not load its pieces. Check your connection and reload the page. (" + S.loadError + ")" : "Loading the latest pieces.")];
+  if (!S.ready) return [emptyState(S.loadError ? "FTPC could not load its pieces. Check your connection and reload the page. (" + S.loadError + ")" : "Loading the latest pieces.")];
   if (!S.articles.length) return [h("div", { class: "pagehead" }, h("h1", null, "Nothing published yet"), h("p", null, "Published pieces appear here, newest first, with one column for each of the four sections. Invited writers submit from Write. The editor publishes from the Desk."))];
   const first = S.articles.find((a) => a.id === S.leadId) || S.articles[0]; const rest = S.articles.filter((a) => a !== first);
   const out = [h("div", { class: "front" }, item(first, true), h("div", { class: "rail" }, conveyor(rest.slice(0, 12), "Latest")))];
@@ -354,7 +355,7 @@ function viewArticle(id) {
   out.append(commentsBlock(a));
   if (S.me.canEdit) out.append(h("div", { class: "card" }, h("b", { class: "meta" }, "Editor"),
     h("div", { class: "field" }, h("label", { for: "corr-text" }, "Add a dated correction"), h("input", { type: "text", id: "corr-text", maxlength: "500" })),
-    h("div", { class: "row" }, h("button", { class: "btn", type: "button", onclick: () => addCorrection(a) }, "Add correction"), h("button", { class: "btn quiet", type: "button", onclick: () => setLead(a.id === S.leadId ? "" : a.id) }, a.id === S.leadId ? "Stop leading with this" : "Make lead"), confirmBtn("Unpublish", "Confirm unpublish", () => unpublish(a)))));
+    h("div", { class: "row" }, h("button", { class: "btn", type: "button", onclick: () => addCorrection(a) }, "Add correction"), h("button", { class: "btn quiet", type: "button", onclick: () => setLead(a.id === S.leadId ? "" : a.id) }, a.id === S.leadId ? "Stop leading with this" : "Make lead"), h("button", { class: "btn quiet", type: "button", onclick: () => setFuture(a, !a.future) }, a.future ? "Take off The Future" : "List on The Future"), confirmBtn("Unpublish", "Confirm unpublish", () => unpublish(a)))));
   return [out];
 }
 function confirmBtn(label, confirmLabel, fn) {
@@ -364,7 +365,7 @@ function confirmBtn(label, confirmLabel, fn) {
 }
 function viewAuthor(id) {
   const r = S.requests[id] || {}; const list = S.articles.filter((a) => a.authorId === id);
-  return [h("div", { class: "pagehead" }, h("span", { class: "meta" }, S.writers[id] ? "Invited writer" : "Writer", r.verified && h("span", { class: "tag" }, "Verified by XS")), avatar(id, "xl"), h("h1", null, r.penName || "Writer"), handleOf(id) && h("p", { class: "meta" }, handleOf(id)), r.bio && h("p", null, r.bio), r.quals && h("p", null, h("b", null, "Qualifications: "), r.quals), r.education && h("p", null, h("b", null, "Education: "), r.education), (r.website || r.youtube || r.other) && h("p", { class: "links" }, [["Website", r.website], ["YouTube", r.youtube], ["More", r.other]].filter((x) => /^https:\/\//.test(x[1] || "")).map((x) => h("a", { href: x[1], target: "_blank", rel: "noopener nofollow" }, x[0]))), id === S.me.id && h("div", { class: "row" }, link("account", "Edit your profile", "btn quiet")), flagControl(id)),
+  return [h("div", { class: "pagehead" }, h("span", { class: "meta" }, S.writers[id] ? "Invited writer" : "Writer", r.verified && h("span", { class: "tag" }, "Verified by FTPC")), avatar(id, "xl"), h("h1", null, r.penName || "Writer"), handleOf(id) && h("p", { class: "meta" }, handleOf(id)), r.bio && h("p", null, r.bio), r.quals && h("p", null, h("b", null, "Qualifications: "), r.quals), r.education && h("p", null, h("b", null, "Education: "), r.education), (r.website || r.youtube || r.other) && h("p", { class: "links" }, [["Website", r.website], ["YouTube", r.youtube], ["More", r.other]].filter((x) => /^https:\/\//.test(x[1] || "")).map((x) => h("a", { href: x[1], target: "_blank", rel: "noopener nofollow" }, x[0]))), id === S.me.id && h("div", { class: "row" }, link("account", "Edit your profile", "btn quiet")), flagControl(id)),
     list.length ? h("div", { class: "list" }, list.map((a) => item(a))) : emptyState("No published pieces from this writer yet.")];
 }
 function viewSaved() {
@@ -374,17 +375,18 @@ function viewSaved() {
 function viewRules() {
   const grid = h("div", { class: "rules" }, h("section", null, h("h3", null, "Every writer"), h("ol", null, COMMON.map((r) => h("li", null, r)))));
   for (const k in SECTIONS) grid.append(h("section", { class: "s-" + k }, h("span", { class: "meta" }, h("span", { class: "sec" }, SECTIONS[k].name)), h("ol", null, SECTIONS[k].rules.map((r) => h("li", null, r)))));
-  grid.append(h("section", null, h("h3", null, "Usernames"), h("ol", null, ["Everyone who signs in chooses one username. It is shown as @name beside comments and on a writer page.", "You can change it once every 15 days. A change is final: you cannot go back to your old username, nobody can take it for 15 days, and after that it is open to anyone.", USERNAME_TERMS, "XS keeps a record of the usernames an account has used."].map((r) => h("li", null, r)))));
-  return [h("div", { class: "pagehead" }, h("h1", null, "House rules"), h("p", null, "The short form of the XS Publisher Guidelines. Writers confirm these on every submission. The full guidelines name the law behind each rule. XS keeps a record of every piece it publishes, including pieces later unpublished by the editor or the writer, for as long as it may need them to answer a complaint or a legal notice.")), grid];
+  grid.append(h("section", null, h("h3", null, "Profile pictures"), h("ol", null, ["Profile pictures are for verified accounts.", PICTURE_RULES].map((r) => h("li", null, r)))));
+  grid.append(h("section", null, h("h3", null, "Usernames"), h("ol", null, ["Everyone who signs in chooses one username. It is shown as @name beside comments and on a writer page.", "You can change it once every 15 days. A change is final: you cannot go back to your old username, nobody can take it for 15 days, and after that it is open to anyone.", USERNAME_TERMS, "FTPC keeps a record of the usernames an account has used."].map((r) => h("li", null, r)))));
+  return [h("div", { class: "pagehead" }, h("h1", null, "House rules"), h("p", null, "The short form of the FTPC Publisher Guidelines. Writers confirm these on every submission. The full guidelines name the law behind each rule. FTPC keeps a record of every piece it publishes, including pieces later unpublished by the editor or the writer, for as long as it may need them to answer a complaint or a legal notice.")), grid];
 }
 
 function draft() { try { return JSON.parse(localStorage.getItem("xs-draft") || "{}"); } catch (e) { return {}; } }
 function keepDraft() { try { localStorage.setItem("xs-draft", JSON.stringify(readForm())); } catch (e) {} }
 function val(id) { const e = document.getElementById(id); return e ? (e.type === "checkbox" ? e.checked : e.value.trim()) : ""; }
-function readForm() { return { title: val("w-title"), dek: val("w-dek"), section: val("w-section"), label: val("w-label"), body: val("w-body"), sources: val("w-sources"), disclosure: val("w-disclosure"), sebiReg: val("w-sebi"), sponsored: val("w-sponsored"), imageAlt: val("w-alt"), imageCredit: val("w-credit"), imageAI: val("w-imgai") }; }
+function readForm() { return { title: val("w-title"), dek: val("w-dek"), section: val("w-section"), label: val("w-label"), body: val("w-body"), sources: val("w-sources"), disclosure: val("w-disclosure"), sebiReg: val("w-sebi"), sponsored: val("w-sponsored"), future: val("w-future"), imageAlt: val("w-alt"), imageCredit: val("w-credit"), imageAI: val("w-imgai") }; }
 
 function viewWrite() {
-  const head = h("div", { class: "pagehead" }, h("h1", null, "Write for XS"), h("p", null, "XS publishes by invitation. The editor reads every Finance and Politics piece before it goes live. Tech and Culture & Lifestyle writers publish directly once the editor has published three of their pieces."));
+  const head = h("div", { class: "pagehead" }, h("h1", null, "Write for FTPC"), h("p", null, "FTPC publishes by invitation. The editor reads every Finance and Politics piece before it goes live. Tech and Culture & Lifestyle writers publish directly once the editor has published three of their pieces."));
   if (!S.ready) return [head, emptyState("Checking your invitation.")];
   if (!S.me.id) return [head, h("p", { class: "alert" }, "Sign in first. Then you can request an invitation to write."), h("div", { class: "row" }, link("signin", "Sign in", "btn solid"))];
   const mine = S.requests[S.me.id];
@@ -397,7 +399,7 @@ function viewWrite() {
   if (!isWriter()) { out.push(h("p", { class: "alert" }, "Your invitation request is with the editor. You can submit once it is approved.")); return out.concat(myPieces()); }
   const d = draft(); const sec = SECTIONS[d.section] ? d.section : "finance";
   const secSel = h("select", { id: "w-section", onchange: () => { keepDraft(); render(true); } }, Object.keys(SECTIONS).map((k) => h("option", { value: k, selected: k === sec }, SECTIONS[k].name)));
-  const warn = h("p", { class: "alert", id: "w-warn", hidden: true }, "This reads like investment advice (a call, a target or a promised return). XS publishes that only from SEBI-registered writers. Remove it, or enter your registration number.");
+  const warn = h("p", { class: "alert", id: "w-warn", hidden: true }, "This reads like investment advice (a call, a target or a promised return). FTPC publishes that only from SEBI-registered writers. Remove it, or enter your registration number.");
   const body = h("textarea", { id: "w-body", required: true, oninput: () => { warn.hidden = !(val("w-section") === "finance" && ADVICE.test(body.value)); keepDraft(); } }); body.value = d.body || "";
   const checks = ["Every factual claim is backed by a source listed below.", "I have disclosed any payment, gift, holding or affiliation, or I have none.", "The words are mine, or quoted briefly with credit.", "Any AI-made image, audio or video is labelled, or there is none.", SECTIONS[sec].check];
   const form = h("form", { class: "sheet s-" + sec, onsubmit: submitPiece, oninput: keepDraft },
@@ -406,7 +408,7 @@ function viewWrite() {
     h("div", { class: "field" }, h("label", { for: "w-title" }, "Headline"), h("input", { type: "text", id: "w-title", maxlength: "120", required: true, value: d.title || "" })),
     h("div", { class: "field" }, h("label", { for: "w-dek" }, "Standfirst"), h("input", { type: "text", id: "w-dek", maxlength: "220", value: d.dek || "" }), h("small", null, "One sentence under the headline.")),
     h("fieldset", { class: "field" }, h("legend", null, "Image (optional)"),
-      h("input", { type: "file", id: "w-img", accept: "image/jpeg,image/png,image/webp", onchange: pickImage, "aria-label": "Choose an image" }), h("small", null, "One image, shown above the piece. XS resizes it. Use only an image you made or have the right to use."),
+      h("input", { type: "file", id: "w-img", accept: "image/jpeg,image/png,image/webp", onchange: pickImage, "aria-label": "Choose an image" }), h("small", null, "One image, shown above the piece. FTPC resizes it. Use only an image you made or have the right to use."),
       h("div", { id: "w-img-prev", class: "sheet" }),
       h("div", { class: "two" }, h("div", { class: "field" }, h("label", { for: "w-alt" }, "Describe the image"), h("input", { type: "text", id: "w-alt", maxlength: "200", value: d.imageAlt || "" }), h("small", null, "Read aloud to readers who cannot see it.")),
         h("div", { class: "field" }, h("label", { for: "w-credit" }, "Credit"), h("input", { type: "text", id: "w-credit", maxlength: "120", value: d.imageCredit || "" }), h("small", null, "Who made it, or where it is licensed from."))),
@@ -416,6 +418,7 @@ function viewWrite() {
     h("div", { class: "field" }, h("label", { for: "w-disclosure" }, "Disclosure"), h("input", { type: "text", id: "w-disclosure", maxlength: "400", required: true, value: d.disclosure || "" }), h("small", null, sec === "finance" ? "State whether you or your family hold what you write about. Write None if you hold nothing." : sec === "politics" ? "State any party membership, campaign role or political payment. Write None if there is none." : "State any payment, gift, free product or employer link. Write None if there is none.")),
     sec === "finance" && h("div", { class: "field" }, h("label", { for: "w-sebi" }, "SEBI registration number"), h("input", { type: "text", id: "w-sebi", maxlength: "40", value: d.sebiReg || "" }), h("small", null, "Only if you are a registered research analyst (INH and 9 digits) or investment adviser (INA and 9 digits).")),
     h("label", { class: "check" }, h("input", { type: "checkbox", id: "w-sponsored", checked: !!d.sponsored }), h("span", null, "This piece is sponsored, or mentions something I was paid or gifted. Label it Sponsored.")),
+    h("label", { class: "check" }, h("input", { type: "checkbox", id: "w-future", checked: !!d.future }), h("span", null, "This piece is about the future. Also list it on About, The Future.")),
     h("fieldset", { class: "field" }, h("legend", null, "Before you submit"), checks.map((c, i) => h("label", { class: "check" }, h("input", { type: "checkbox", id: "ck-" + i, required: true }), h("span", null, c)))),
     h("p", { class: "err", id: "w-err", hidden: true }),
     h("div", { class: "row" }, h("button", { class: "btn solid", type: "submit", id: "w-go" }, canDirect(S.me.id, sec) ? "Publish now" : "Submit for review"), link("rules", "Read the house rules", "btn quiet")));
@@ -428,7 +431,7 @@ function myPieces() {
   if (!S.mine.length) return [];
   const names = { submitted: "With the editor", returned: "Sent back", published: "Published", unpublished: "Unpublished by the editor" };
   return [h("div", { class: "cols" }, h("section", { class: "col" }, h("h3", null, "Your pieces"),
-    h("p", { class: "meta" }, "You can unpublish your own piece at any time. XS keeps a record of every published piece, including unpublished ones."),
+    h("p", { class: "meta" }, "You can unpublish your own piece at any time. FTPC keeps a record of every published piece, including unpublished ones."),
     S.mine.map((m) => { const out = m.status === "published" && pulled(S.me.id, m.id); const live = m.status === "published" && !out;
       return h("div", { class: "card s-" + m.section }, h("div", { class: "meta" }, h("span", { class: "sec" }, SECTIONS[m.section] ? SECTIONS[m.section].name : ""), h("span", { class: "tag" + (out ? " warn" : "") }, out ? "Unpublished by you" : (names[m.status] || m.status)), m.submittedAt && h("span", null, when(m.submittedAt))),
         h("h3", null, live ? link("a-" + m.id, m.title) : m.title), m.status === "returned" && m.note && h("p", null, "Editor's note: " + m.note),
@@ -441,8 +444,8 @@ function myPieces() {
 
 function viewDesk() {
   const head = h("div", { class: "pagehead" }, h("h1", null, "Desk"), h("p", null, "Review submissions, approve writers and handle reports."));
-  if (!S.me.canEdit) return [head, emptyState("The Desk is for the XS editor.")];
-  const tabs = h("div", { class: "tabs" }, [["review", "Review"], ["front", "Front page"], ["direct", "Spot-check"], ["writers", "Writers"], ["names", "Usernames" + (S.desk.flags && S.desk.flags.length ? " · " + S.desk.flags.length : "")], ["reports", "Reports"], ["archive", "Archive"]].map(([k, n]) => h("button", { class: "btn quiet", type: "button", "aria-pressed": String(S.desk.tab === k), onclick: () => { S.desk.tab = k; render(true); } }, n)),
+  if (!S.me.canEdit) return [head, emptyState("The Desk is for the FTPC editor.")];
+  const tabs = h("div", { class: "tabs" }, [["review", "Review"], ["front", "Front page"], ["direct", "Spot-check"], ["writers", "Writers"], ["pages", "Pages"], ["names", "Usernames" + (S.desk.flags && S.desk.flags.length ? " · " + S.desk.flags.length : "")], ["reports", "Reports"], ["archive", "Archive"]].map(([k, n]) => h("button", { class: "btn quiet", type: "button", "aria-pressed": String(S.desk.tab === k), onclick: () => { S.desk.tab = k; render(true); } }, n)),
     h("button", { class: "btn quiet", type: "button", onclick: loadDesk }, "Refresh"));
   const q = h("div", { class: "queue" });
   if (S.desk.tab === "review") {
@@ -489,6 +492,8 @@ function viewDesk() {
         ok && h("p", { class: "meta" }, editedCount(id) + " editor-published. Direct publishing in Tech and Culture & Lifestyle: " + (S.writers[id].direct === false ? "paused" : editedCount(id) >= 3 ? "on" : "after 3")),
         h("div", { class: "row" }, h("button", { class: "btn quiet", type: "button", onclick: () => setVerified(id, !r.verified) }, r.verified ? "Remove verified mark" : "Mark as verified"), ok && h("button", { class: "btn quiet", type: "button", onclick: () => setDirect(id, S.writers[id].direct === false) }, S.writers[id].direct === false ? "Allow direct publishing" : "Pause direct publishing"), ok ? confirmBtn("Withdraw invitation", "Confirm withdrawal", () => setWriter(id, false)) : h("button", { class: "btn solid", type: "button", onclick: () => setWriter(id, true) }, "Approve"))));
     }
+  } else if (S.desk.tab === "pages") {
+    deskPages(q);
   } else if (S.desk.tab === "names") {
     deskUsernames(q);
   } else {
@@ -506,7 +511,7 @@ function render(force) {
   if (!force && ae && main.contains(ae) && /^(INPUT|TEXTAREA|SELECT)$/.test(ae.tagName)) { chrome(); return; }
   chrome();
   // Signed in without a username: choose one first. The house rules stay readable.
-  const kids = (S.ready && S.me.id && !S.me.username && v !== "rules") || v === "account" ? viewAccount() : v === "section" ? viewSection(S.route.id) : v === "article" ? viewArticle(S.route.id) : v === "author" ? viewAuthor(S.route.id) : v === "write" ? viewWrite() : v === "desk" ? viewDesk() : v === "saved" ? viewSaved() : v === "rules" ? viewRules() : v === "signin" ? viewSignin() : viewHome();
+  const kids = (S.ready && S.me.id && !S.me.username && v !== "rules") || v === "account" ? viewAccount() : v === "section" ? viewSection(S.route.id) : v === "article" ? viewArticle(S.route.id) : v === "author" ? viewAuthor(S.route.id) : v === "write" ? viewWrite() : v === "desk" ? viewDesk() : v === "saved" ? viewSaved() : v === "rules" ? viewRules() : v === "signin" ? viewSignin() : v.slice(0, 5) === "about" ? viewAbout(v) : viewHome();
   main.replaceChildren(...kids.filter(Boolean), footer());
 }
 function fail(e) { toast((e && e.message) ? e.message : "That did not save. Try again."); }
@@ -515,8 +520,8 @@ const ts = (v) => (v ? Date.parse(v) : null);
 function imageUrl(path) { return path ? SUPA_URL + "/storage/v1/object/public/" + BUCKET + "/" + path.split("/").map(encodeURIComponent).join("/") : ""; }
 
 function viewSignin() {
-  const head = h("div", { class: "pagehead" }, h("h1", null, "Sign in"), h("p", null, "Enter your email and XS sends you a sign-in link. No password. Readers sign in to like, save, comment and report. Writers sign in to write."));
-  if (!S.ready) return [head, emptyState(S.loadError ? "XS could not check your sign-in. Reload the page. (" + S.loadError + ")" : "Checking whether you are already signed in.")];
+  const head = h("div", { class: "pagehead" }, h("h1", null, "Sign in"), h("p", null, "Enter your email and FTPC sends you a sign-in link. No password. Readers sign in to like, save, comment and report. Writers sign in to write."));
+  if (!S.ready) return [head, emptyState(S.loadError ? "FTPC could not check your sign-in. Reload the page. (" + S.loadError + ")" : "Checking whether you are already signed in.")];
   if (S.me.id) return [head, h("p", { class: "alert" }, "You are signed in."), h("div", { class: "row" }, link("home", "Go to the front page", "btn solid"))];
   return [head, h("form", { class: "sheet", onsubmit: sendLink },
     h("div", { class: "field" }, h("label", { for: "si-email" }, "Email"), h("input", { type: "text", id: "si-email", inputmode: "email", autocomplete: "email", maxlength: "200", required: true })),
@@ -537,10 +542,10 @@ async function signOut() { await S.db.auth.signOut(); S.me = { id: null, canEdit
 function norm(p, corr) {
   return { id: p.id, raw: p.status, status: p.status === "unpublished_by_editor" ? "unpublished" : p.status === "unpublished_by_writer" ? "published" : p.status,
     title: p.title, dek: p.dek, body: p.body, section: p.section, label: p.label, sources: p.sources, disclosure: p.disclosure, sponsored: p.sponsored, sebiReg: p.sebi_reg,
-    authorId: p.author_id, penName: p.sample ? "XS sample" : "", sample: p.sample, direct: p.direct,
+    authorId: p.author_id, penName: p.sample ? "FTPC sample" : "", sample: p.sample, direct: p.direct,
     publishedAt: ts(p.published_at), submittedAt: ts(p.submitted_at), unpublishedAt: ts(p.unpublished_at),
     hasImage: !!p.image_path, image: imageUrl(p.image_path), imagePath: p.image_path, imageAlt: p.image_alt, imageCredit: p.image_credit, imageAI: p.image_ai,
-    note: p.editor_note, republishAsk: p.republish_requested, corrections: corr[p.id] || [] };
+    note: p.editor_note, republishAsk: p.republish_requested, corrections: corr[p.id] || [], future: !!p.future };
 }
 async function load() {
   const sb = S.db;
@@ -564,7 +569,8 @@ async function load() {
   // Usernames are public: one list of account id and @name.
   const un = await sb.rpc("usernames"); S.handles = {}; S.avatars = {}; for (const u of (un.data || [])) if (u.username) { S.handles[u.id] = u.username; if (u.avatar_path) S.avatars[u.id] = u.avatar_path; }
   for (const p of Object.values(people)) { if (p.username) S.handles[p.id] = p.username; if (p.avatar_path) S.avatars[p.id] = p.avatar_path; else if ("avatar_path" in p) delete S.avatars[p.id]; }
-  S.me = { id: uid, canEdit: myRole === "editor", canWrite: uid ? true : null, username: (uid && S.handles[uid]) || "", usernameChangedAt: (uid && people[uid] && ts(people[uid].username_changed_at)) || null, usernameRemoved: (uid && people[uid] && people[uid].username_removed) || "", email };
+  S.me = { id: uid, canEdit: myRole === "editor", canWrite: uid ? true : null, username: (uid && S.handles[uid]) || "", usernameChangedAt: (uid && people[uid] && ts(people[uid].username_changed_at)) || null, usernameRemoved: (uid && people[uid] && people[uid].username_removed) || "", email, verified: !!(uid && people[uid] && people[uid].verified) };
+  const pgs = await sb.from("pages").select("*"); S.pages = {}; for (const pg of (pgs.data || [])) S.pages[pg.slug] = { title: pg.title, body: pg.body, at: ts(pg.updated_at) };
   const corr = {}; for (const c of (co.data || [])) (corr[c.piece_id] = corr[c.piece_id] || []).push({ at: ts(c.created_at), text: c.body });
   S.all = pc.data.map((p) => norm(p, corr));
   S.articles = S.all.filter((p) => p.raw === "published").sort((a, b) => (b.publishedAt || 0) - (a.publishedAt || 0));
@@ -600,12 +606,12 @@ async function saveByline(ev) {
 const HANDLE = /^[a-z][a-z0-9_]{2,19}$/;
 function cleanHandle(v) { return (v || "").trim().toLowerCase().replace(/^@/, ""); }
 function handleOf(id) { return S.handles[id] ? "@" + S.handles[id] : ""; }
-const USERNAME_TERMS = "A username must not pose as another person, a company, a regulator, a government body or XS, and must not be abusive. Anyone signed in can flag a username. The editor can remove any username that breaks this rule, even if it was not reserved or banned beforehand; the person then chooses a new one and the removed name is not given out again.";
+const USERNAME_TERMS = "A username must not pose as another person, a company, a regulator, a government body or FTPC, and must not be abusive. Anyone signed in can flag a username. The editor can remove any username that breaks this rule, even if it was not reserved or banned beforehand; the person then chooses a new one and the removed name is not given out again.";
 const day = (t) => new Date(t).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" });
 function viewAccount() {
   const first = !S.me.username;
   const head = h("div", { class: "pagehead" }, h("h1", null, first ? "Choose your username" : "Your profile"),
-    h("p", null, first ? "Everyone on XS has one username. It appears as @name next to your comments, and on your writer page if you write for XS. Choose it before you continue." : "Your username appears as @name next to your comments, and on your writer page if you write for XS."));
+    h("p", null, first ? "Everyone on FTPC has one username. It appears as @name next to your comments, and on your writer page if you write for FTPC. Choose it before you continue." : "Your username appears as @name next to your comments, and on your writer page if you write for FTPC."));
   if (!S.ready) return [head, emptyState("Checking your account.")];
   if (!S.me.id) return [head, h("p", { class: "alert" }, "Sign in first."), h("div", { class: "row" }, link("signin", "Sign in", "btn solid"))];
   const next = S.me.usernameChangedAt ? S.me.usernameChangedAt + 15 * 86400000 : 0; const locked = !first && next > Date.now();
@@ -617,7 +623,7 @@ function viewAccount() {
       h("small", null, "3 to 20 characters: letters, digits and underscore, starting with a letter. Capital letters become small letters.")),
     h("p", { class: "err", id: "u-err", hidden: true }),
     h("div", { class: "row" }, h("button", { class: "btn solid", type: "submit", id: "u-go" }, first ? "Save username" : "Change username"))));
-  if (!first) out.push(pictureForm(), ...profileForm(), h("section", { class: "sheet" }, h("h3", null, "Settings"), S.me.email && h("p", { class: "meta" }, "Signed in as " + S.me.email + ". Your email is never shown on XS."), h("div", { class: "row" }, h("button", { class: "btn quiet", type: "button", onclick: signOut }, "Sign out"))));
+  if (!first) out.push(pictureForm(), ...profileForm(), h("section", { class: "sheet" }, h("h3", null, "Settings"), S.me.email && h("p", { class: "meta" }, "Signed in as " + S.me.email + ". Your email is never shown on FTPC."), h("div", { class: "row" }, h("button", { class: "btn quiet", type: "button", onclick: signOut }, "Sign out"))));
   out.push(h("div", { class: "note" }, h("b", null, "Username rules"), h("span", null, "You can change your username once every 15 days. A change is final: you cannot go back to your old username, nobody can take it for 15 days, and after that it is open to anyone. " + USERNAME_TERMS)));
   return out;
 }
@@ -631,8 +637,8 @@ function avatar(id, cls) {
 }
 // Shrinks a chosen photo in the browser before it is stored. square = crop to the middle, for profile pictures.
 function shrink(file, maxW, square) {
-  return new Promise((res, rej) => { const r = new FileReader(); r.onerror = () => rej(new Error("XS could not read that file."));
-    r.onload = () => { const im = new Image(); im.onerror = () => rej(new Error("XS could not read that file as an image."));
+  return new Promise((res, rej) => { const r = new FileReader(); r.onerror = () => rej(new Error("FTPC could not read that file."));
+    r.onload = () => { const im = new Image(); im.onerror = () => rej(new Error("FTPC could not read that file as an image."));
       im.onload = () => { const side = Math.min(im.naturalWidth, im.naturalHeight); let w = Math.min(maxW, square ? side : im.naturalWidth), q = 0.82, out = "";
         for (let i = 0; i < 10; i++) { const c = document.createElement("canvas"); const x = c.getContext("2d");
           if (square) { c.width = c.height = w; x.drawImage(im, (im.naturalWidth - side) / 2, (im.naturalHeight - side) / 2, side, side, 0, 0, w, w); }
@@ -661,14 +667,41 @@ async function removeAvatar(id) {
   if (old) await S.db.storage.from(UBUCKET).remove([old]).catch(() => {});
   await load(); toast("Profile picture removed"); render(true);
 }
+const PICTURE_RULES = "It does not have to be a photo of you. It must not be obscene, sexual, violent or gory; must not insult or mock any religion, community, caste, gender or person; must not show hate symbols; must not be another person's photo without their permission or a logo that is not yours; and must not pretend to be FTPC or an official body. The editor removes a picture that breaks these rules.";
 function pictureForm() {
-  const has = !!S.avatars[S.me.id];
+  const has = !!S.avatars[S.me.id]; const allowed = S.me.canEdit || S.me.verified;
+  if (!allowed) return h("section", { class: "sheet" }, h("h3", null, "Profile picture"), h("div", { class: "byl" }, avatar(S.me.id, "xl"), h("p", { class: "meta" }, "Profile pictures are for verified accounts. Until then, your first letter is shown. ", PICTURE_RULES)));
   return h("section", { class: "sheet" }, h("h3", null, "Profile picture"),
     h("div", { class: "byl" }, avatar(S.me.id, "xl"), h("div", { class: "field" }, h("label", { for: "av-file" }, has ? "Change your picture" : "Add a picture"), h("input", { type: "file", id: "av-file", accept: "image/jpeg,image/png,image/webp", onchange: pickAvatar }),
-      h("small", null, "Shown on your profile, beside your comments, and beside your byline on your pieces. It is cropped to a square. Use a picture you have the right to use; do not use another person's photo or a logo that is not yours. The editor can remove a picture that breaks the house rules."))),
+      h("small", null, "Shown on your profile, beside your comments, and beside your byline on your pieces. It is cropped to a square. " + PICTURE_RULES))),
     has && h("div", { class: "row" }, confirmBtn("Remove picture", "Confirm", () => removeAvatar(S.me.id))));
 }
-// Comment text: plain words, with https links made clickable. A link to an XS piece shows that piece's headline.
+// About FTPC: four pages the editor can rewrite from the Desk.
+const ABOUT = [["philosophy", "about", "Philosophy"], ["future", "about-future", "The Future"], ["use", "about-use", "Use and misuse"], ["next", "about-next", "What's next"]];
+function viewAbout(token) {
+  const cur = ABOUT.find((x) => x[1] === token) || ABOUT[0]; const pg = S.pages[cur[0]];
+  const tabs = h("nav", { class: "tabs", "aria-label": "About FTPC" }, ABOUT.map(([slug, tok, name]) => { const a = link(tok, name, "btn quiet"); if (tok === cur[1]) a.setAttribute("aria-current", "page"); return a; }));
+  const out = [h("div", { class: "pagehead" }, h("span", { class: "meta" }, h("span", null, "About FTPC")), h("h1", null, pg ? pg.title : cur[2])), tabs];
+  if (!pg) { out.push(emptyState(S.ready ? "This page is being written." : "Loading.")); return out; }
+  out.push(h("article", { class: "piece" }, prose(pg.body), pg.at && h("p", { class: "meta" }, "Last updated " + whenTime(pg.at, true))));
+  if (cur[0] === "future") { const list = S.articles.filter((a) => a.future); out.push(h("h3", null, "Ideas about the future"), list.length ? h("div", { class: "list" }, list.map((a) => item(a))) : emptyState("No pieces here yet. Writers can mark a piece \"The Future\" when they submit it.")); }
+  if (S.me.canEdit) out.push(h("div", { class: "row" }, h("button", { class: "btn quiet", type: "button", onclick: () => { S.desk.tab = "pages"; go("desk"); } }, "Edit this page on the Desk")));
+  return out;
+}
+function deskPages(q) {
+  q.append(h("p", { class: "alert" }, "These are the About pages. Write in plain sentences; leave an empty line between paragraphs, and start a line with ## to make a subheading. Changes go live as soon as you save."));
+  for (const [slug, tok, name] of ABOUT) { const pg = S.pages[slug] || { title: name, body: "" };
+    q.append(h("div", { class: "card" }, h("div", { class: "meta" }, h("span", { class: "tag" }, name), pg.at && h("span", null, "Last updated " + whenTime(pg.at)), link(tok, "View")),
+      h("div", { class: "field" }, h("label", { for: "pg-t-" + slug }, "Title"), h("input", { type: "text", id: "pg-t-" + slug, maxlength: "80", value: pg.title })),
+      h("div", { class: "field" }, h("label", { for: "pg-b-" + slug }, "Text"), h("textarea", { id: "pg-b-" + slug, maxlength: "20000" }, pg.body)),
+      h("div", { class: "row" }, h("button", { class: "btn solid", type: "button", onclick: () => savePage(slug) }, "Save " + name)))); }
+}
+async function savePage(slug) {
+  const title = val("pg-t-" + slug), body = val("pg-b-" + slug); if (title.length < 2) return toast("Give the page a title.");
+  await act(S.db.from("pages").update({ title, body }).eq("slug", slug), "Page saved");
+}
+async function setFuture(a, on) { await act(S.db.from("pieces").update({ future: on }).eq("id", a.id), on ? "Listed on The Future" : "Taken off The Future"); }
+// Comment text: plain words, with https links made clickable. A link to an FTPC piece shows that piece's headline.
 function richText(text) {
   const out = []; const here = location.origin + location.pathname;
   (text || "").split(/(https:\/\/[^\s<>"']+)/g).forEach((part, i) => {
@@ -692,7 +725,7 @@ function commentForm(a, parentId) {
   const key = parentId ? "r" : "c";
   return h("div", { class: "cform" + (parentId ? " reply" : "") },
     h("div", { class: "field" }, h("label", { for: key + "-text" }, parentId ? "Your reply" : "Add a comment"), h("textarea", { id: key + "-text", class: "short", maxlength: "1000" }),
-      h("small", null, "Paste a full https:// link to share a website or another XS piece. Comments follow the house rules. The editor can hide any comment.")),
+      h("small", null, "Paste a full https:// link to share a website or another FTPC piece. Comments follow the house rules. The editor can hide any comment.")),
     h("div", { class: "row" }, h("button", { class: "btn solid", type: "button", id: key + "-go", onclick: () => postComment(a, parentId) }, parentId ? "Post reply" : "Post comment"), parentId && h("button", { class: "btn quiet", type: "button", onclick: () => { S.replyTo = null; render(true); } }, "Cancel")));
 }
 function commentCard(a, c) {
@@ -717,7 +750,7 @@ function commentsBlock(a) {
 }
 function bylineBlock(a) {
   const id = a.authorId; if (!id || a.sample) return null; const r = S.requests[id] || {};
-  return h("div", { class: "byl" }, avatar(id, "lg"), h("div", null, link("w-" + id, byline(a)), h("div", { class: "meta" }, handleOf(id) && h("span", null, handleOf(id)), r.verified && h("span", { class: "tag" }, "Verified by XS"))));
+  return h("div", { class: "byl" }, avatar(id, "lg"), h("div", null, link("w-" + id, byline(a)), h("div", { class: "meta" }, handleOf(id) && h("span", null, handleOf(id)), r.verified && h("span", { class: "tag" }, "Verified by FTPC"))));
 }
 function conveyor(list, title) {
   if (!list.length) return null; const moving = list.length >= 4; const secs = list.length * 6;
@@ -742,10 +775,10 @@ function deskCommentReports(q) {
 async function closeCommentReport(r) { await act(S.db.from("comment_reports").update({ handled: true }).eq("id", r.id), "Marked handled"); }
 function profileForm() {
   const mine = S.requests[S.me.id];
-  if (!mine && !isWriter()) return [h("section", { class: "sheet" }, h("h3", null, "Writer profile"), h("p", { class: "meta" }, "A byline, bio and links are for people who write for XS. To ask for an invitation, open Write."), h("div", { class: "row" }, link("write", "Write for XS", "btn"))) ];
+  if (!mine && !isWriter()) return [h("section", { class: "sheet" }, h("h3", null, "Writer profile"), h("p", { class: "meta" }, "A byline, bio and links are for people who write for FTPC. To ask for an invitation, open Write."), h("div", { class: "row" }, link("write", "Write for FTPC", "btn"))) ];
   const m = mine || {}; const f = (id, label, value, max, hint, area) => h("div", { class: "field" }, h("label", { for: id }, label), area ? h("textarea", { id, class: "short", maxlength: String(max) }, value || "") : h("input", { type: "text", id, maxlength: String(max), value: value || "" }), hint && h("small", null, hint));
   return [h("form", { class: "sheet", onsubmit: saveProfile }, h("h3", null, "Writer profile"),
-    h("p", { class: "meta" }, "Shown on your writer page", S.writers[S.me.id] ? ". " : " once the editor has invited you. ", m.verified ? h("span", { class: "tag" }, "Verified by XS") : "The editor can mark a profile as verified after checking who you are."),
+    h("p", { class: "meta" }, "Shown on your writer page", S.writers[S.me.id] ? ". " : " once the editor has invited you. ", m.verified ? h("span", { class: "tag" }, "Verified by FTPC") : "The editor can mark a profile as verified after checking who you are."),
     f("p-name", "Byline", m.penName, 40, "The name printed on your pieces. 2 to 40 characters."),
     f("p-bio", "About you", m.bio, 400, "What you write about and your background. Up to 400 characters.", true),
     f("p-quals", "Qualifications and registrations", m.quals, 300, "For example a professional qualification, or a SEBI registration number if you hold one. Leave empty if none. Do not claim a qualification you do not hold.", true),
@@ -850,7 +883,7 @@ async function submitPiece(ev) {
   const btn = document.getElementById("w-go"); btn.disabled = true;
   try {
     const direct = canDirect(S.me.id, f.section);
-    const row = { section: f.section, label: f.label, title: f.title, dek: f.dek, body: f.body, sources: f.sources, disclosure: f.disclosure, sponsored: !!f.sponsored, sebi_reg: f.sebiReg || "" };
+    const row = { section: f.section, label: f.label, title: f.title, dek: f.dek, body: f.body, sources: f.sources, disclosure: f.disclosure, sponsored: !!f.sponsored, future: !!f.future, sebi_reg: f.sebiReg || "" };
     const editing = S.editingId && S.mine.find((m) => m.id === S.editingId && (m.raw === "returned" || m.raw === "unpublished_by_editor"));
     const path = await uploadImage();
     if (path) Object.assign(row, { image_path: path, image_alt: f.imageAlt, image_credit: f.imageCredit, image_ai: !!f.imageAI });
@@ -899,7 +932,7 @@ async function unpublish(a) {
   if (a.id === S.leadId) await run(S.db.from("settings").update({ lead_piece_id: null }).eq("id", 1));
   await load(); toast("Unpublished. It is kept in the Archive."); go("home");
 }
-async function withdraw(m, on) { await act(S.db.from("pieces").update({ status: on ? "unpublished_by_writer" : "published" }).eq("id", m.id), on ? "Unpublished. XS keeps a record of the piece." : "Back on the site"); }
+async function withdraw(m, on) { await act(S.db.from("pieces").update({ status: on ? "unpublished_by_writer" : "published" }).eq("id", m.id), on ? "Unpublished. FTPC keeps a record of the piece." : "Back on the site"); }
 async function declineAsk(m) { await act(S.db.from("pieces").update({ republish_requested: false }).eq("id", m.id), "Declined. The piece stays unpublished."); }
 async function askRepublish(a) { await act(S.db.from("pieces").update({ republish_requested: true }).eq("id", a.id), "Request sent. The piece returns if the writer accepts."); }
 async function restore(x) { await act(S.db.from("pieces").update({ status: "published" }).eq("id", x.id), "Restored to the site"); }
