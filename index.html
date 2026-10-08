@@ -96,6 +96,13 @@ h1, h2, h3 { text-wrap: balance; margin: 0; line-height: 1.12; letter-spacing: -
 .links { display: flex; gap: 14px; flex-wrap: wrap; font-size: 14px }
 .sheet + .sheet, .sheet + .note, .alert + .sheet, .card + .sheet { margin-top: 32px }
 @media (max-width: 560px) { .comment.reply, .cform.reply { margin-left: 20px } }
+.brief { display: grid; gap: 6px; padding: 14px 0; border-top: 1px solid var(--line) }
+.brief h3 { font-size: 18px; line-height: 1.25; font-weight: 700 }
+.brief h3 a { text-decoration: none }
+.brief h3 a:hover { text-decoration: underline; text-underline-offset: 3px }
+.cols .col { gap: 0 }
+.cols .col > .sec { display: block; padding-bottom: 12px }
+.cols .col > .meta { padding-top: 14px; border-top: 1px solid var(--line); margin: 0 }
 .cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 28px; margin-top: 40px; padding-top: 24px; border-top: 2px solid var(--ink) }
 .col { display: grid; gap: 18px; align-content: start; min-width: 0 }
 .col > .sec { font-family: var(--mono); font-size: 13px }
@@ -281,6 +288,12 @@ function item(a, big, withSec) {
     h(big ? "h2" : "h3", null, link("a-" + a.id, a.title)),
     a.dek && h("p", { class: "dek" }, a.dek), big && a.hasImage && figure(a));
 }
+// A compact entry for the section columns at the bottom of the front page: headline first, one quiet line under it.
+function shortWhen(ms) { try { const d = new Date(ms); const o = { day: "numeric", month: "short", hour: "numeric", minute: "2-digit", hour12: true, timeZone: "Asia/Kolkata" }; if (d.getFullYear() !== new Date().getFullYear()) o.year = "numeric"; return new Intl.DateTimeFormat("en-IN", o).format(d); } catch (e) { return ""; } }
+function brief(a) {
+  return h("article", { class: "brief" }, h("h3", null, link("a-" + a.id, a.title)),
+    h("div", { class: "meta" }, a.sponsored && h("span", { class: "tag warn" }, "Sponsored"), a.sample && h("span", { class: "tag warn" }, "Sample"), h("span", null, byline(a)), a.publishedAt && h("span", null, shortWhen(a.publishedAt))));
+}
 function emptyState(text) { return h("p", { class: "empty" }, text); }
 function footer() {
   return h("footer", null,
@@ -296,7 +309,7 @@ function viewHome() {
   const cols = h("div", { class: "cols" });
   for (const k in SECTIONS) {
     const list = S.articles.filter((a) => a.section === k).slice(0, 3);
-    cols.append(h("section", { class: "col s-" + k }, link(k, SECTIONS[k].name, "sec"), list.length ? list.map((a) => item(a, false, false)) : h("p", { class: "meta" }, "No pieces yet")));
+    cols.append(h("section", { class: "col s-" + k }, link(k, SECTIONS[k].name, "sec"), list.length ? list.map((a) => brief(a)) : h("p", { class: "meta" }, "No pieces yet")));
   }
   out.push(cols);
   return out;
