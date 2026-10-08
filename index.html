@@ -96,6 +96,14 @@ h1, h2, h3 { text-wrap: balance; margin: 0; line-height: 1.12; letter-spacing: -
 .links { display: flex; gap: 14px; flex-wrap: wrap; font-size: 14px }
 .sheet + .sheet, .sheet + .note, .alert + .sheet, .card + .sheet { margin-top: 32px }
 @media (max-width: 560px) { .comment.reply, .cform.reply { margin-left: 20px } }
+.menu { position: relative }
+#tools { margin-left: auto; flex-wrap: nowrap }
+@media (max-width: 640px) { .bar-in > .nav { order: 3; flex-basis: 100%; overflow-x: auto; flex-wrap: nowrap; padding-bottom: 2px } .bar-in > .nav a { white-space: nowrap } }
+.menu > summary { list-style: none; cursor: pointer; user-select: none }
+.menu > summary::-webkit-details-marker { display: none }
+.menu-list { position: absolute; right: 0; top: calc(100% + 6px); z-index: 20; display: grid; min-width: 210px; padding: 6px; background: var(--bg); border: 1px solid var(--line); box-shadow: 0 10px 28px rgba(0,0,0,.14) }
+.menu-list a, .menu-list button { display: block; text-align: left; padding: 10px 12px; text-decoration: none; color: inherit; background: none; border: 0; font: inherit; cursor: pointer }
+.menu-list a:hover, .menu-list button:hover, .menu-list a:focus-visible, .menu-list button:focus-visible { background: var(--surface) }
 .tabs a[aria-current="page"] { background: var(--ink); color: var(--bg) }
 .brief { display: grid; gap: 6px; padding: 14px 0; border-top: 1px solid var(--line) }
 .brief h3 { font-size: 18px; line-height: 1.25; font-weight: 700 }
@@ -263,14 +271,18 @@ window.addEventListener("hashchange", () => { const r = parse(location.hash); if
 function chrome() {
   const nav = document.getElementById("nav"); nav.replaceChildren();
   for (const k in SECTIONS) { const a = link(k, SECTIONS[k].name); if (S.route.view === "section" && S.route.id === k) a.setAttribute("aria-current", "page"); nav.append(a); }
-  const tools = document.getElementById("tools"); tools.replaceChildren(link("about", "About", "btn quiet"), link("rules", "Rules", "btn quiet"));
-  if (S.me.id) tools.append(link("saved", "Saved", "btn quiet"));
-  if (S.me.canEdit) tools.append(link("desk", "Desk", "btn quiet"));
-  tools.append(link("write", "Write", "btn solid"));
-  // Until the first check finishes, FTPC does not yet know whether you are signed in, so it shows neither button.
-  if (S.ready && S.me.id) tools.append(link("account", S.me.username ? "@" + S.me.username : "Account", "btn quiet"));
-  if (S.ready) tools.append(S.me.id ? h("button", { class: "btn quiet", type: "button", onclick: signOut }, "Sign out") : link("signin", "Sign in", "btn quiet"));
+  // Write stays visible; everything else sits in one menu so the header stays clear.
+  const items = [link("about", "About FTPC"), link("rules", "House rules")];
+  if (S.me.id) items.push(link("account", "Your profile"), link("saved", "Saved"));
+  if (S.me.canEdit) items.push(link("desk", "Desk"));
+  if (S.ready) items.push(S.me.id ? h("button", { type: "button", onclick: signOut }, "Sign out") : link("signin", "Sign in"));
+  const label = S.ready && S.me.id ? (S.me.username ? "@" + S.me.username : "Account") : "Menu";
+  const menu = h("details", { class: "menu" }, h("summary", { class: "btn quiet", "aria-label": "Open menu" }, label, h("span", { "aria-hidden": "true" }, " \u25BE")), h("div", { class: "menu-list" }, items));
+  const tools = document.getElementById("tools"); tools.replaceChildren(link("write", "Write", "btn solid"), menu);
 }
+// Close the menu when the reader clicks anywhere else or presses Escape.
+document.addEventListener("click", (ev) => { for (const m of document.querySelectorAll("details.menu[open]")) if (!m.contains(ev.target) || ev.target.closest(".menu-list a, .menu-list button")) m.open = false; });
+document.addEventListener("keydown", (ev) => { if (ev.key === "Escape") for (const m of document.querySelectorAll("details.menu[open]")) m.open = false; });
 
 function metaRow(a, withSec, zone) {
   return h("div", { class: "meta" },
@@ -567,7 +579,9 @@ async function load() {
     if (p.role === "writer" || p.role === "editor") S.writers[p.id] = { direct: !p.direct_paused };
   }
   // Usernames are public: one list of account id and @name.
-  const un = await sb.rpc("usernames"); S.handles = {}; S.avatars = {}; for (const u of (un.data || [])) if (u.username) { S.handles[u.id] = u.username; if (u.avatar_path) S.avatars[u.id] = u.avatar_path; }
+  // Ask only for the names this page can show: writers, commenters and people who liked. There is no public list of every username.
+  const wanted = [...new Set([...(pc.data || []).map((x) => x.author_id), ...(cm.data || []).map((x) => x.author_id), ...(lk.data || []).map((x) => x.user_id)].filter(Boolean))];
+  const un = wanted.length ? await sb.rpc("usernames_for", { ids: wanted.slice(0, 500) }) : { data: [] }; S.handles = {}; S.avatars = {}; for (const u of (un.data || [])) if (u.username) { S.handles[u.id] = u.username; if (u.avatar_path) S.avatars[u.id] = u.avatar_path; }
   for (const p of Object.values(people)) { if (p.username) S.handles[p.id] = p.username; if (p.avatar_path) S.avatars[p.id] = p.avatar_path; else if ("avatar_path" in p) delete S.avatars[p.id]; }
   S.me = { id: uid, canEdit: myRole === "editor", canWrite: uid ? true : null, username: (uid && S.handles[uid]) || "", usernameChangedAt: (uid && people[uid] && ts(people[uid].username_changed_at)) || null, usernameRemoved: (uid && people[uid] && people[uid].username_removed) || "", email, verified: !!(uid && people[uid] && people[uid].verified) };
   const pgs = await sb.from("pages").select("*"); S.pages = {}; for (const pg of (pgs.data || [])) S.pages[pg.slug] = { title: pg.title, body: pg.body, at: ts(pg.updated_at) };
@@ -880,20 +894,25 @@ async function submitPiece(ev) {
   else if (S.img && f.imageAlt.length < 5) msg = "Describe the image in a few words for readers who cannot see it.";
   else if (S.img && f.imageCredit.length < 3) msg = "Add a credit for the image.";
   err.hidden = !msg; err.textContent = msg; if (msg) return;
-  const btn = document.getElementById("w-go"); btn.disabled = true;
+  const btn = document.getElementById("w-go"); btn.disabled = true; let path = null;
   try {
     const direct = canDirect(S.me.id, f.section);
     const row = { section: f.section, label: f.label, title: f.title, dek: f.dek, body: f.body, sources: f.sources, disclosure: f.disclosure, sponsored: !!f.sponsored, future: !!f.future, sebi_reg: f.sebiReg || "" };
     const editing = S.editingId && S.mine.find((m) => m.id === S.editingId && (m.raw === "returned" || m.raw === "unpublished_by_editor"));
-    const path = await uploadImage();
+    path = await uploadImage();
     if (path) Object.assign(row, { image_path: path, image_alt: f.imageAlt, image_credit: f.imageCredit, image_ai: !!f.imageAI });
     const q = editing ? S.db.from("pieces").update(Object.assign(row, { status: "submitted" })).eq("id", editing.id)
                       : S.db.from("pieces").insert(Object.assign(row, { author_id: S.me.id, status: direct ? "published" : "submitted" }));
     const { error } = await q; if (error) throw error;
+    // A replaced image is no longer used by anything, so its file is removed.
+    if (path && editing && editing.imagePath && editing.imagePath !== path) await S.db.storage.from(BUCKET).remove([editing.imagePath]).catch(() => {});
     try { localStorage.removeItem("xs-draft"); } catch (e) {}
     S.img = null; S.editingId = null;
     await load(); toast(direct && !editing ? "Published" : "Submitted for review"); render(true); window.scrollTo(0, 0);
-  } catch (e) { btn.disabled = false; err.hidden = false; err.textContent = (e && e.message) || "That did not save. Try again."; }
+  } catch (e) {
+    // The piece did not save, so an image uploaded for it is removed rather than left behind.
+    if (path) await S.db.storage.from(BUCKET).remove([path]).catch(() => {});
+    btn.disabled = false; err.hidden = false; err.textContent = (e && e.message) || "That did not save. Try again."; }
 }
 async function publish(s) {
   if (s.sebiReg && !SEBI.test(s.sebiReg)) return toast("The SEBI number is not valid. Send the piece back.");
